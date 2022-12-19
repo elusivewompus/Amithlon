@@ -1,0 +1,1 @@
+#define CONFIG_R8169 1

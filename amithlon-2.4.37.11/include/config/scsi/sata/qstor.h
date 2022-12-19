@@ -1,0 +1,1 @@
+#define CONFIG_SCSI_SATA_QSTOR 1

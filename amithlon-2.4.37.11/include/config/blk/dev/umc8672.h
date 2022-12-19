@@ -1,0 +1,1 @@
+#define CONFIG_BLK_DEV_UMC8672 1

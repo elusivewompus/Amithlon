@@ -1,0 +1,1 @@
+#define CONFIG_X86_F00F_WORKS_OK 1

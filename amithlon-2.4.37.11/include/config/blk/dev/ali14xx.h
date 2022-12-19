@@ -1,0 +1,1 @@
+#define CONFIG_BLK_DEV_ALI14XX 1
