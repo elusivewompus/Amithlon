@@ -1,0 +1,1 @@
+#define CONFIG_WDC_ALI15X3 1

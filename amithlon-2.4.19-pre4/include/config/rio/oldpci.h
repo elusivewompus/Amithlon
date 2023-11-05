@@ -1,0 +1,1 @@
+#define CONFIG_RIO_OLDPCI 1

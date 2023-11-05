@@ -1,0 +1,1 @@
+#define CONFIG_CYZ_INTR 1
