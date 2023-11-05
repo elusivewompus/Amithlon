@@ -22,6 +22,7 @@
 #define NVRAM_MINOR 144
 #define I2O_MINOR 166
 #define MICROCODE_MINOR		184
+#define MKBD_MINOR 196
 #define MWAVE_MINOR	219		/* ACP/Mwave Modem */
 #define MPT_MINOR	220
 #define MISC_DYNAMIC_MINOR 255

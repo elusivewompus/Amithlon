@@ -873,12 +873,14 @@ static int clgen_decode_var (const struct fb_var_screeninfo *var, void *par,
 	if (_par->var.yoffset < 0)
 		_par->var.yoffset = 0;
 
+#if 0
 	/* truncate xoffset and yoffset to maximum if too high */
 	if (_par->var.xoffset > _par->var.xres_virtual - _par->var.xres)
 		_par->var.xoffset = _par->var.xres_virtual - _par->var.xres - 1;
 
 	if (_par->var.yoffset > _par->var.yres_virtual - _par->var.yres)
 		_par->var.yoffset = _par->var.yres_virtual - _par->var.yres - 1;
+#endif
 
 	switch (_par->var.bits_per_pixel) {
 	case 1:

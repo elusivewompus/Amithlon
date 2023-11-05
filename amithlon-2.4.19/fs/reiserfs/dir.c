@@ -1,8 +1,8 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
+#ifdef __KERNEL__
 
-#include <linux/config.h>
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
@@ -106,10 +106,6 @@ static int reiserfs_readdir (struct file * filp, void * dirent, filldir_t filldi
 		if (!d_name[d_reclen - 1])
 		    d_reclen = strlen (d_name);
 	
-		if (d_reclen > REISERFS_MAX_NAME_LEN(inode->i_sb->s_blocksize)){
-		    /* too big to send back to VFS */
-		    continue ;
-		}
 		d_off = deh_offset (deh);
 		filp->f_pos = d_off ;
 		d_ino = deh_objectid (deh);
@@ -131,8 +127,7 @@ static int reiserfs_readdir (struct file * filp, void * dirent, filldir_t filldi
 		// user space buffer is swapped out. At that time
 		// entry can move to somewhere else
 		memcpy (local_buf, d_name, d_reclen);
-		if (filldir (dirent, local_buf, d_reclen, d_off, d_ino, 
-		             DT_UNKNOWN) < 0) {
+		if (filldir (dirent, d_name, d_reclen, d_off, d_ino) < 0) {
 		    if (local_buf != small_buf) {
 			reiserfs_kfree(local_buf, d_reclen, inode->i_sb) ;
 		    }

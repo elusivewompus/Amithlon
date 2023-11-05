@@ -126,41 +126,41 @@ static void init_once(void * foo, kmem_cache_t * cachep, unsigned long flags)
  * you start marking them dirty..
  */
  
-/**
- *	__mark_inode_dirty -	internal function
- *	@inode: inode to mark
- *	@flags: what kind of dirty (i.e. I_DIRTY_SYNC)
- *	Mark an inode as dirty. Callers should use mark_inode_dirty or
- *  	mark_inode_dirty_sync.
- */
- 
+  /**
+   *	__mark_inode_dirty -	internal function
+   *	@inode: inode to mark
+   *	@flags: what kind of dirty (i.e. I_DIRTY_SYNC)
+   *	Mark an inode as dirty. Callers should use mark_inode_dirty or
+   *  	mark_inode_dirty_sync.
+   */
+   
 void __mark_inode_dirty(struct inode *inode, int flags)
 {
-	struct super_block * sb = inode->i_sb;
-
-	if (!sb)
-		return;
-
-	/* Don't do this for I_DIRTY_PAGES - that doesn't actually dirty the inode itself */
-	if (flags & (I_DIRTY_SYNC | I_DIRTY_DATASYNC)) {
-		if (sb->s_op && sb->s_op->dirty_inode)
-			sb->s_op->dirty_inode(inode);
-	}
-
-	/* avoid the locking if we can */
-	if ((inode->i_state & flags) == flags)
-		return;
-
-	spin_lock(&inode_lock);
-	if ((inode->i_state & flags) != flags) {
-		inode->i_state |= flags;
-		/* Only add valid (ie hashed) inodes to the dirty list */
-		if (!(inode->i_state & I_LOCK) && !list_empty(&inode->i_hash)) {
-			list_del(&inode->i_list);
-			list_add(&inode->i_list, &sb->s_dirty);
-		}
-	}
-	spin_unlock(&inode_lock);
+  struct super_block * sb = inode->i_sb;
+  
+  if (!sb)
+    return;
+  
+  /* Don't do this for I_DIRTY_PAGES - that doesn't actually dirty the inode itself */
+  if (flags & (I_DIRTY_SYNC | I_DIRTY_DATASYNC)) {
+    if (sb->s_op && sb->s_op->dirty_inode)
+      sb->s_op->dirty_inode(inode);
+  }
+  
+  /* avoid the locking if we can */
+  if ((inode->i_state & flags) == flags)
+    return;
+  
+  spin_lock(&inode_lock);
+  if ((inode->i_state & flags) != flags) {
+    inode->i_state |= flags;
+    /* Only add valid (ie hashed) inodes to the dirty list */
+    if (!list_empty(&inode->i_hash)) {
+      list_del(&inode->i_list);
+      list_add(&inode->i_list, &sb->s_dirty);
+    }
+  }
+  spin_unlock(&inode_lock);
 }
 
 static void __wait_on_inode(struct inode * inode)

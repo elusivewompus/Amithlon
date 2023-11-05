@@ -673,6 +673,7 @@ int GET_FB_IDX(kdev_t rdev)
 }
 #endif
 
+extern void disable_logo(void);
 static int
 fb_open(struct inode *inode, struct file *file)
 {
@@ -680,6 +681,7 @@ fb_open(struct inode *inode, struct file *file)
 	struct fb_info *info;
 	int res = 0;
 
+	disable_logo();
 #ifdef CONFIG_KMOD
 	if (!(info = registered_fb[fbidx]))
 		try_to_load(fbidx);
@@ -890,6 +892,14 @@ int __init video_setup(char *options)
 		options++;
 	    } else
 	        return 0;
+    }
+
+    if (!strncmp(options, "dovesa",6)) {
+      for (i = 0; i < NUM_FB_DRIVERS; i++) {
+	if (strcmp(fb_drivers[i].name,"vesa"))
+	  fb_drivers[i].init = NULL;
+      }
+      return 0;
     }
 
     if (!strncmp(options, "map:", 4)) {

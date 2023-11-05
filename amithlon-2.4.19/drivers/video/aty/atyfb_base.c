@@ -1188,8 +1188,10 @@ static int atyfb_pan_display(struct fb_var_screeninfo *var, int con,
     yres = ((par->crtc.v_tot_disp>>16) & 0x7ff)+1;
     xoffset = (var->xoffset+7) & ~7;
     yoffset = var->yoffset;
+#if 0
     if (xoffset+xres > par->crtc.vxres || yoffset+yres > par->crtc.vyres)
 	return -EINVAL;
+#endif
     par->crtc.xoffset = xoffset;
     par->crtc.yoffset = yoffset;
     set_off_pitch(par, info);

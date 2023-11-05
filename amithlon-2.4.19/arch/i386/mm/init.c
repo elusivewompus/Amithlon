@@ -36,8 +36,9 @@
 #include <asm/fixmap.h>
 #include <asm/e820.h>
 #include <asm/apic.h>
+#include <linux/uae.h>
 #include <asm/tlb.h>
-
+  
 mmu_gather_t mmu_gathers[NR_CPUS];
 unsigned long highstart_pfn, highend_pfn;
 static unsigned long totalram_pages;
@@ -573,6 +574,14 @@ void free_initmem(void)
 #ifdef CONFIG_BLK_DEV_INITRD
 void free_initrd_mem(unsigned long start, unsigned long end)
 {
+  /* Instead of giving this back to the OS, let's hand it to UAE instead */
+  while (start&0xfff)
+    start++;
+  while (end&0xfff)
+    end--;
+  add_uae_block((start-PAGE_OFFSET)/4096,(end-PAGE_OFFSET)/4096-1);
+  return;
+
 	if (start < end)
 		printk (KERN_INFO "Freeing initrd memory: %ldk freed\n", (end - start) >> 10);
 	for (; start < end; start += PAGE_SIZE) {

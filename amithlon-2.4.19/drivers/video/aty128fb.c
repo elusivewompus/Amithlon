@@ -7,6 +7,9 @@
  *                Ani Joshi / Jeff Garzik
  *                      - Code cleanup
  *
+ *                Andreas Hundt <andi@convergence.de>
+ *                      - FB_ACTIVATE fixes
+ *
  *                Michel Dänzer <michdaen@iiic.ethz.ch>
  *                      - 15/16 bit cleanup
  *                      - fix panning
@@ -77,7 +80,7 @@
 #include <asm/vc_ioctl.h>
 #endif
 #ifdef CONFIG_BOOTX_TEXT
-#include <asm/btext.h>
+#include <asm/bootx.h>
 #endif /* CONFIG_BOOTX_TEXT */
 
 #include <video/fbcon.h>
@@ -528,7 +531,7 @@ static u32
 _aty_ld_pll(unsigned int pll_index,
 			const struct fb_info_aty128 *info)
 {       
-    aty_st_8(CLOCK_CNTL_INDEX, pll_index & 0x3F);
+    aty_st_8(CLOCK_CNTL_INDEX, pll_index & 0x2F);
     return aty_ld_le32(CLOCK_CNTL_DATA);
 }
 
@@ -537,7 +540,7 @@ static void
 _aty_st_pll(unsigned int pll_index, u32 val,
 			const struct fb_info_aty128 *info)
 {
-    aty_st_8(CLOCK_CNTL_INDEX, (pll_index & 0x3F) | PLL_WR_EN);
+    aty_st_8(CLOCK_CNTL_INDEX, (pll_index & 0x2F) | PLL_WR_EN);
     aty_st_le32(CLOCK_CNTL_DATA, val);
 }
 
@@ -799,8 +802,13 @@ aty128_set_crtc(const struct aty128_crtc *crtc,
     aty_st_le32(CRTC_PITCH, crtc->pitch);
     aty_st_le32(CRTC_OFFSET, crtc->offset);
     aty_st_le32(CRTC_OFFSET_CNTL, crtc->offset_cntl);
-    /* Disable ATOMIC updating.  Is this the right place? */
+    /* Disable ATOMIC updating.  Is this the right place?
+     * -- BenH: Breaks on my G4
+     * -- BenH: Normal, it's a pll reg ! and the mask value is false
+     */
+#if 1
     aty_st_pll(PPLL_CNTL, aty_ld_pll(PPLL_CNTL) & ~(0x00030000));
+#endif
 }
 
 
@@ -848,11 +856,13 @@ aty128_var_to_crtc(const struct fb_var_screeninfo *var,
     xres = (xres + 7) & ~7;
     xoffset = (xoffset + 7) & ~7;
 
+#if 0
     if (vxres < xres + xoffset)
 	vxres = xres + xoffset;
 
     if (vyres < yres + yoffset)
 	vyres = yres + yoffset;
+#endif
 
     /* convert depth into ATI register depth */
     dst = depth_to_dst(depth);
@@ -1078,7 +1088,7 @@ aty128_set_lcd_enable(struct fb_info_aty128 *info, int on)
     
     if (on) {
 	reg = aty_ld_le32(LVDS_GEN_CNTL);
-	reg |= LVDS_ON | LVDS_EN | LVDS_BLON | LVDS_DIGION;
+	reg |= LVDS_ON | LVDS_EN;
 	reg &= ~LVDS_DISPLAY_DIS;
 	aty_st_le32(LVDS_GEN_CNTL, reg);
 #ifdef CONFIG_PMAC_BACKLIGHT
@@ -1350,12 +1360,12 @@ aty128_set_par(struct aty128fb_par *par,
 	display_info.disp_reg_address = info->regbase_phys;
     }
 #endif /* CONFIG_FB_COMPAT_XPMAC */
-#if defined(CONFIG_BOOTX_TEXT)
-    btext_update_display(info->frame_buffer_phys,
-		    (((par->crtc.h_total>>16) & 0xff)+1)*8,
-		    ((par->crtc.v_total>>16) & 0x7ff)+1,
-		    par->crtc.bpp,
-		    par->crtc.vxres*par->crtc.bpp/8);
+#ifdef CONFIG_BOOTX_TEXT
+	bootx_update_display(info->frame_buffer_phys,
+			     (((par->crtc.h_total>>16) & 0xff)+1)*8,
+			     ((par->crtc.v_total>>16) & 0x7ff)+1,
+			     par->crtc.bpp,
+			     par->crtc.vxres*par->crtc.bpp/8);
 #endif /* CONFIG_BOOTX_TEXT */
 }
 
@@ -1478,10 +1488,17 @@ aty128fb_set_var(struct fb_var_screeninfo *var, int con, struct fb_info *fb)
     if ((err = aty128_decode_var(var, &par, info)))
 	return err;
 
-    aty128_encode_var(var, &par, info);
+    {
+      int get_out=0;
 
-    if ((var->activate & FB_ACTIVATE_MASK) == FB_ACTIVATE_TEST)
+      if ((var->activate & FB_ACTIVATE_MASK) == FB_ACTIVATE_TEST)
+	get_out=1;
+      
+      aty128_encode_var(var, &par, info);
+
+      if (get_out)
 	return 0;
+    }
 
     oldxres = display->var.xres;
     oldyres = display->var.yres;
@@ -1637,8 +1654,10 @@ aty128fb_pan_display(struct fb_var_screeninfo *var, int con,
     xoffset = (var->xoffset +7) & ~7;
     yoffset = var->yoffset;
 
+#if 0
     if (xoffset+xres > par->crtc.vxres || yoffset+yres > par->crtc.vyres)
         return -EINVAL;
+#endif
 
     par->crtc.xoffset = xoffset;
     par->crtc.yoffset = yoffset;
@@ -1753,7 +1772,7 @@ aty128fb_setup(char *options)
     if (!options || !*options)
 	return 0;
 
-    while ((this_opt = strsep(&options, ",")) != 0) {
+    while (this_opt = strsep(&options, ",")) {
 	if (!strncmp(this_opt, "font:", 5)) {
 	    char *p;
 	    int i;
@@ -2019,7 +2038,7 @@ aty128_pci_register(struct pci_dev *pdev,
 	if ((err = pci_enable_device(pdev))) {
 		printk(KERN_ERR "aty128fb: Cannot enable PCI device: %d\n",
 				err);
-		return -ENODEV;
+		goto err_out;
 	}
 
 	fb_addr = pci_resource_start(pdev, 0);
@@ -2517,8 +2536,7 @@ static int backlight_conv[] = {
  * backlight anyway
  */
 #define BACKLIGHT_LVDS_OFF
-/* That one prevents proper CRT output with LCD off */
-#undef BACKLIGHT_DAC_OFF
+#define BACKLIGHT_DAC_OFF
 
 static int
 aty128_set_backlight_enable(int on, int level, void* data)
@@ -2530,15 +2548,6 @@ aty128_set_backlight_enable(int on, int level, void* data)
 		on = 0;
 	reg |= LVDS_BL_MOD_EN | LVDS_BLON;
 	if (on && level > BACKLIGHT_OFF) {
-		reg |= LVDS_DIGION;
-		if (!reg & LVDS_ON) {
-			reg &= ~LVDS_BLON;
-			aty_st_le32(LVDS_GEN_CNTL, reg);
-			(void)aty_ld_le32(LVDS_GEN_CNTL);
-			mdelay(10);
-			reg |= LVDS_BLON;
-			aty_st_le32(LVDS_GEN_CNTL, reg);
-		}
 		reg &= ~LVDS_BL_MOD_LEVEL_MASK;
 		reg |= (backlight_conv[level] << LVDS_BL_MOD_LEVEL_SHIFT);
 #ifdef BACKLIGHT_LVDS_OFF
@@ -2553,11 +2562,8 @@ aty128_set_backlight_enable(int on, int level, void* data)
 		reg &= ~LVDS_BL_MOD_LEVEL_MASK;
 		reg |= (backlight_conv[0] << LVDS_BL_MOD_LEVEL_SHIFT);
 #ifdef BACKLIGHT_LVDS_OFF
+		reg &= ~(LVDS_ON | LVDS_EN);
 		reg |= LVDS_DISPLAY_DIS;
-		aty_st_le32(LVDS_GEN_CNTL, reg);
-		(void)aty_ld_le32(LVDS_GEN_CNTL);
-		udelay(10);
-		reg &= ~(LVDS_ON | LVDS_EN | LVDS_BLON | LVDS_DIGION);
 #endif		
 		aty_st_le32(LVDS_GEN_CNTL, reg);
 #ifdef BACKLIGHT_DAC_OFF

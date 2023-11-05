@@ -32,6 +32,7 @@ typedef struct bootmem_data {
 extern unsigned long __init bootmem_bootmap_pages (unsigned long);
 extern unsigned long __init init_bootmem (unsigned long addr, unsigned long memend);
 extern void __init reserve_bootmem (unsigned long addr, unsigned long size);
+extern int  __init bootmem_is_reserved (unsigned long addr);
 extern void __init free_bootmem (unsigned long addr, unsigned long size);
 extern void * __init __alloc_bootmem (unsigned long size, unsigned long align, unsigned long goal);
 #define alloc_bootmem(x) \

@@ -385,6 +385,8 @@ struct pci_dev {
 	int (*prepare)(struct pci_dev *dev);	/* ISAPnP hooks */
 	int (*activate)(struct pci_dev *dev);
 	int (*deactivate)(struct pci_dev *dev);
+  
+        int bridge_valid_bases;
 };
 
 #define pci_dev_g(n) list_entry(n, struct pci_dev, global_list)

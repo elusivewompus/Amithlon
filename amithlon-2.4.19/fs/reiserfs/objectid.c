@@ -1,13 +1,19 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
+#ifdef __KERNEL__
 
-#include <linux/config.h>
 #include <linux/string.h>
 #include <linux/locks.h>
 #include <linux/random.h>
 #include <linux/sched.h>
 #include <linux/reiserfs_fs.h>
+
+#else
+
+#include "nokernel.h"
+
+#endif
 
 
 // find where objectid map starts

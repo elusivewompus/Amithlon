@@ -92,6 +92,7 @@
 
 /* make checkconfig does not check included files... */
 #include <linux/config.h>
+#include "../amithlon.h"
 
 #include "matroxfb_base.h"
 #include "matroxfb_misc.h"
@@ -249,6 +250,7 @@ static int matroxfb_pan_display(struct fb_var_screeninfo *var, int con,
 
 	DBG("matroxfb_pan_display")
 
+#if 0
 	if (var->vmode & FB_VMODE_YWRAP) {
 		if (var->yoffset < 0 || var->yoffset >= fb_display[con].var.yres_virtual || var->xoffset)
 			return -EINVAL;
@@ -257,6 +259,7 @@ static int matroxfb_pan_display(struct fb_var_screeninfo *var, int con,
 		    var->yoffset+fb_display[con].var.yres > fb_display[con].var.yres_virtual)
 			return -EINVAL;
 	}
+#endif
 	if (con == ACCESS_FBINFO(currcon))
 		matrox_pan_var(PMINFO var);
 	fb_display[con].var.xoffset = var->xoffset;
@@ -479,11 +482,12 @@ static int matroxfb_decode_var(CPMINFO struct display* p, struct fb_var_screenin
 		var->yres = var->yres_virtual;
 	if (var->xres_virtual < var->xres)
 		var->xres = var->xres_virtual;
+#if 0
 	if (var->xoffset + var->xres > var->xres_virtual)
 		var->xoffset = var->xres_virtual - var->xres;
 	if (var->yoffset + var->yres > var->yres_virtual)
 		var->yoffset = var->yres_virtual - var->yres;
-
+#endif
 	if (var->bits_per_pixel == 0) {
 		var->red.offset = 0;
 		var->red.length = 6;
@@ -1006,6 +1010,24 @@ static int matroxfb_get_vblank(CPMINFO struct fb_vblank *vblank)
 	return 0;
 }
 
+void matrox_rectcopy(struct matrox_fb_info* minfo, 
+		     int sy, int sx, int dy, int dx, int height, int width,
+		     int vxres);
+int matrox_rectcopy_complete(struct matrox_fb_info* minfo, 
+			     int sy, int sx, int dy, int dx, 
+			     int height, int width,
+			     int spitch, int dpitch, int op,
+			     int oldpitch, int Bpp);
+
+void matroxfb_accel_clear(WPMINFO u_int32_t color, int sy, int sx, int height,
+			  int width);
+int matrox_blittemplate(struct matrox_fb_info* minfo,
+			u_int32_t fgx, u_int32_t bgx, 
+			int sy, int sx, 
+			int height, int width, 
+			int offset, char* data, int pitch,
+			unsigned char rop3);
+
 static int matroxfb_ioctl(struct inode *inode, struct file *file,
 			  unsigned int cmd, unsigned long arg, int con,
 			  struct fb_info *info)
@@ -1158,6 +1180,89 @@ static int matroxfb_ioctl(struct inode *inode, struct file *file,
 					return -EFAULT;
 				return 0;
 			}
+ 	        case MATROX_CROSS_4MB:
+			{
+				if (put_user(ACCESS_FBINFO(capable.cross4MB), (u_int32_t*)arg))
+					return -EFAULT;
+				return 0;
+			}
+ 	        case AMITHLON_MAXCLOCK:
+			{
+				if (put_user(ACCESS_FBINFO(max_pixel_clock), (u_int32_t*)arg))
+					return -EFAULT;
+				return 0;
+			}
+	        case AMITHLON_COPY_RECT: 
+			{ /* Copy rectangle */
+				amithlon_copy ac;
+				
+				if (copy_from_user(&ac, (void *) arg, sizeof(ac)))
+					return -EFAULT;
+				matrox_rectcopy(minfo,
+						ac.sy,
+						ac.sx,
+						ac.dy,
+						ac.dx,
+						ac.height,
+						ac.width,
+						ac.vxres);
+				return 0;
+			}
+
+	        case AMITHLON_COPY_RECT_COMPLETE: 
+			{ /* Copy rectangle */
+				amithlon_copy_complete acr;
+				
+				if (copy_from_user(&acr, (void *) arg, sizeof(acr)))
+					return -EFAULT;
+				return matrox_rectcopy_complete(minfo,
+								acr.sy,
+								acr.sx,
+								acr.dy,
+								acr.dx,
+								acr.height,
+								acr.width,
+								acr.spitch,
+								acr.dpitch,
+								acr.op,
+								acr.oldpitch,
+								acr.Bpp);
+			}
+
+	       case AMITHLON_FILL_RECT: 
+		       { /* Fill rectangle */
+			       amithlon_fill af;
+			       
+			       if (copy_from_user(&af, (void *) arg, sizeof(af)))
+				       return -EFAULT;
+			       matroxfb_accel_clear(PMINFO
+						    af.colour,
+						    af.sy,
+						    af.sx,
+						    af.height,
+						    af.width);
+			       return 0;
+		       }
+	      case AMITHLON_BLIT_TEMP: { /* Blit Template */
+		      amithlon_blittemplate ab;
+		      int answer=0;
+		      
+		      if (copy_from_user(&ab, (void *) arg, sizeof(ab)))
+			      return -EFAULT;
+		      answer=matrox_blittemplate(minfo,
+						 ab.colour0,
+						 ab.colour1,
+						 ab.sy,
+						 ab.sx,
+						 ab.height,
+						 ab.width,
+						 ab.offset,
+						 ab.data,
+						 ab.pitch,
+						 ab.rop3);
+		      return answer;
+	      }
+
 	}
 	return -EINVAL;
 #undef minfo

@@ -1,4 +1,3 @@
-
 /*
  * Keyed 32-bit hash function using TEA in a Davis-Meyer function
  *   H0 = Key
@@ -171,8 +170,6 @@ u32 keyed_hash(const signed char *msg, int len)
 	return h0^h1;
 }
 
-/* What follows in this file is copyright 2000 by Hans Reiser, and the
- * licensing of what follows is governed by reiserfs/README */
 
 u32 yura_hash (const signed char *msg, int len)
 {

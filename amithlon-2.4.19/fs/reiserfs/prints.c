@@ -1,14 +1,21 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
 
-#include <linux/config.h>
+#include <stdarg.h>
 #include <linux/sched.h>
 #include <linux/fs.h>
 #include <linux/reiserfs_fs.h>
 #include <linux/string.h>
 
+#else
+
+#include "nokernel.h"
 #include <stdarg.h>
+#include <limits.h>
+
+#endif
+
 
 static char error_buf[1024];
 static char fmt_buf[1024];
@@ -18,11 +25,10 @@ static char off_buf[80];
 static char * reiserfs_cpu_offset (struct cpu_key * key)
 {
   if (cpu_key_k_type(key) == TYPE_DIRENTRY)
-    sprintf (off_buf, "%Lu(%Lu)", 
-	     (unsigned long long)GET_HASH_VALUE (cpu_key_k_offset (key)),
-	     (unsigned long long)GET_GENERATION_NUMBER (cpu_key_k_offset (key)));
+    sprintf (off_buf, "%Lu(%Lu)", GET_HASH_VALUE (cpu_key_k_offset (key)),
+	     GET_GENERATION_NUMBER (cpu_key_k_offset (key)));
   else
-    sprintf (off_buf, "0x%Lx", (unsigned long long)cpu_key_k_offset (key));
+    sprintf (off_buf, "0x%Lx", cpu_key_k_offset (key));
   return off_buf;
 }
 
@@ -33,11 +39,10 @@ static char * le_offset (struct key * key)
 
   version = le_key_version (key);
   if (le_key_k_type (version, key) == TYPE_DIRENTRY)
-    sprintf (off_buf, "%Lu(%Lu)", 
-	     (unsigned long long)GET_HASH_VALUE (le_key_k_offset (version, key)),
-	     (unsigned long long)GET_GENERATION_NUMBER (le_key_k_offset (version, key)));
+    sprintf (off_buf, "%Lu(%Lu)", GET_HASH_VALUE (le_key_k_offset (version, key)),
+	     GET_GENERATION_NUMBER (le_key_k_offset (version, key)));
   else
-    sprintf (off_buf, "0x%Lx", (unsigned long long)le_key_k_offset (version, key));
+    sprintf (off_buf, "0x%Lx", le_key_k_offset (version, key));
   return off_buf;
 }
 
@@ -263,18 +268,10 @@ void reiserfs_warning (const char * fmt, ...)
 {
   do_reiserfs_warning(fmt);
   /* console_print (error_buf); */
-  printk (KERN_WARNING "%s", error_buf);
+  printk ("%s", error_buf);
 }
 
-void reiserfs_debug (struct super_block *s, int level, const char * fmt, ...)
-{
-#ifdef CONFIG_REISERFS_CHECK
-  do_reiserfs_warning(fmt);
-  printk (KERN_DEBUG "%s", error_buf);
-#else
-  ; 
-#endif
-}
+
 
 /* The format:
 
@@ -328,12 +325,33 @@ extern struct tree_balance * cur_tb;
 
 void reiserfs_panic (struct super_block * sb, const char * fmt, ...)
 {
+#ifdef __KERNEL__
   show_reiserfs_locks() ;
-  do_reiserfs_warning(fmt);
-  printk ( KERN_EMERG "%s", error_buf);
+#endif
+  do_reiserfs_warning;
+  printk ("%s", error_buf);
   BUG ();
+  /* console_print (error_buf); */
 
-  /* this is not actually called, but makes reiserfs_panic() "noreturn" */
+#ifdef __KERNEL__
+
+  /* comment before release */
+  //for (;;);
+
+#if 0 /* this is not needed, the state is ignored */
+  if (sb && !(sb->s_flags & MS_RDONLY)) {
+    sb->u.reiserfs_sb.s_mount_state |= REISERFS_ERROR_FS;
+    sb->u.reiserfs_sb.s_rs->s_state = REISERFS_ERROR_FS;
+    
+    mark_buffer_dirty(sb->u.reiserfs_sb.s_sbh, 1);
+    sb->s_dirt = 1;
+  }
+#endif
+
+  /* this is to prevent panic from syncing this filesystem */
+  if (sb)
+    sb->s_flags |= MS_RDONLY;
+
   panic ("REISERFS: panic (device %s): %s\n",
 	 sb ? kdevname(sb->s_dev) : "sb == 0", error_buf);
 }

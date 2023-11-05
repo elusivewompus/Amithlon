@@ -17,7 +17,7 @@ HPATH   	= $(TOPDIR)/include
 FINDHPATH	= $(HPATH)/asm $(HPATH)/linux $(HPATH)/scsi $(HPATH)/net $(HPATH)/math-emu
 
 HOSTCC  	= gcc
-HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 -march=i686 -fomit-frame-pointer
 
 CROSS_COMPILE 	=
 
@@ -569,3 +569,11 @@ rpm:	clean spec
 	. scripts/mkversion > .version ; \
 	rpm -ta $(TOPDIR)/../$(KERNELPATH).tar.gz ; \
 	rm $(TOPDIR)/../$(KERNELPATH).tar.gz
+
+
+
+
+
+
+
+

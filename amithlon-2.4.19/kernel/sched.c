@@ -127,6 +127,12 @@ extern struct task_struct *child_reaper;
 
 void scheduling_functions_start_here(void) { }
 
+
+/* This lets us mess easily with the scheduler, to improve AmigaOS
+   interrupt response time in the face of disk I/O */
+unsigned long process_to_elevate=0;
+int do_elevate_process=0;
+
 /*
  * This is the function that decides how desirable a process is..
  * You can weigh different processes against each other depending
@@ -190,6 +196,11 @@ static inline int goodness(struct task_struct * p, int this_cpu, struct mm_struc
 	 */
 	weight = 1000 + p->rt_priority;
 out:
+	if (process_to_elevate && 
+	    p->pid==process_to_elevate && 
+	    do_elevate_process 
+	    )
+	  return 2000; /* Run this before all other */
 	return weight;
 }
 

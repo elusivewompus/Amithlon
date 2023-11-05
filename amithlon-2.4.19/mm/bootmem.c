@@ -99,6 +99,19 @@ static void __init reserve_bootmem_core(bootmem_data_t *bdata, unsigned long add
 			printk("hm, page %08lx reserved twice.\n", i*PAGE_SIZE);
 }
 
+static int __init bootmem_is_reserved_core(bootmem_data_t *bdata, unsigned long addr)
+{
+	unsigned long i;
+	/*
+	 * round up, partially reserved pages are considered
+	 * fully reserved.
+	 */
+	unsigned long sidx = (addr - bdata->node_boot_start)/PAGE_SIZE;
+	if (test_bit(sidx, bdata->node_bootmem_map))
+	  return 1;
+	return 0;
+}
+
 static void __init free_bootmem_core(bootmem_data_t *bdata, unsigned long addr, unsigned long size)
 {
 	unsigned long i;
@@ -310,6 +323,11 @@ unsigned long __init init_bootmem (unsigned long start, unsigned long pages)
 void __init reserve_bootmem (unsigned long addr, unsigned long size)
 {
 	reserve_bootmem_core(contig_page_data.bdata, addr, size);
+}
+
+int __init bootmem_is_reserved (unsigned long addr)
+{
+  return bootmem_is_reserved_core(contig_page_data.bdata, addr);
 }
 
 void __init free_bootmem (unsigned long addr, unsigned long size)

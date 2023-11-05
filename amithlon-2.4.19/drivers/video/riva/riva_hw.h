@@ -44,10 +44,24 @@
  * from this source.  -- Jeff Garzik <jgarzik@mandrakesoft.com>, 01/Nov/99 
  */
 
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/riva_hw.h,v 1.6 2000/02/08 17:19:12 dawes Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/riva_hw.h,v 1.21 2002/10/14 18:22:46 mvojkovi Exp $ */
 #ifndef __RIVA_HW_H__
 #define __RIVA_HW_H__
 #define RIVA_SW_VERSION 0x00010003
+
+#ifndef Bool
+typedef int Bool;
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef NULL
+#define NULL 0
+#endif
 
 /*
  * Typedefs to force certain sized values.
@@ -59,8 +73,14 @@ typedef unsigned int   U032;
 /*
  * HW access macros.
  */
+#if defined(__powerpc__)
+#include <asm/io.h>
+#define NV_WR08(p,i,d)	out_8(p+i, d)
+#define NV_RD08(p,i)	in_8(p+i)
+#else
 #define NV_WR08(p,i,d)  (((U008 *)(p))[i]=(d))
 #define NV_RD08(p,i)    (((U008 *)(p))[i])
+#endif
 #define NV_WR16(p,i,d)  (((U016 *)(p))[(i)/2]=(d))
 #define NV_RD16(p,i)    (((U016 *)(p))[(i)/2])
 #define NV_WR32(p,i,d)  (((U032 *)(p))[(i)/4]=(d))
@@ -75,6 +95,7 @@ typedef unsigned int   U032;
 #define NV_ARCH_04  0x04
 #define NV_ARCH_10  0x10
 #define NV_ARCH_20  0x20
+#define NV_ARCH_30  0x30
 
 /***************************************************************************\
 *                                                                           *
@@ -88,8 +109,12 @@ typedef unsigned int   U032;
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BB];
     U032 Rop3;
 } RivaRop;
@@ -99,8 +124,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BD];
     U032 Shape;
     U032 reserved03[0x001];
@@ -114,8 +143,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BB];
     U032 TopLeft;
     U032 WidthHeight;
@@ -126,8 +159,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop[1];
+#endif
     U032 reserved01[0x0BC];
     U032 Color;
     U032 reserved03[0x03E];
@@ -140,8 +177,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BB];
     U032 TopLeftSrc;
     U032 TopLeftDst;
@@ -153,8 +194,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop[1];
+#endif
     U032 reserved01[0x0BC];
     U032 TopLeft;
     U032 WidthHeight;
@@ -168,8 +213,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BB];
     U032 reserved03[(0x040)-1];
     U032 Color1A;
@@ -230,8 +279,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BC];
     U032 TextureOffset;
     U032 TextureFormat;
@@ -256,8 +309,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BB];
     U032 ColorKey;
     U032 TextureOffset;
@@ -290,8 +347,12 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop[1];
+#endif
     U032 reserved01[0x0BC];
     U032 Color;             /* source color               0304-0307*/
     U032 Reserved02[0x03e];
@@ -321,16 +382,24 @@ typedef volatile struct
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BE];
     U032 Offset;
 } RivaSurface;
 typedef volatile struct
 {
     U032 reserved00[4];
+#ifdef __BIG_ENDIAN
+    U032 FifoFree;
+#else
     U016 FifoFree;
     U016 Nop;
+#endif
     U032 reserved01[0x0BD];
     U032 Pitch;
     U032 RenderBufferOffset;
@@ -342,6 +411,9 @@ typedef volatile struct
 *                        Virtualized RIVA H/W interface.                    *
 *                                                                           *
 \***************************************************************************/
+
+#define FP_ENABLE  1
+#define FP_DITHER  2
 
 struct _riva_hw_inst;
 struct _riva_hw_state;
@@ -355,6 +427,7 @@ typedef struct _riva_hw_inst
      */
     U032 Architecture;
     U032 Version;
+    U032 Chipset;
     U032 CrystalFreqKHz;
     U032 RamAmountKBytes;
     U032 MaxVClockFreqKHz;
@@ -364,11 +437,15 @@ typedef struct _riva_hw_inst
     U032 VBlankBit;
     U032 FifoFreeCount;
     U032 FifoEmptyCount;
+    U032 CursorStart;
+    U032 flatPanel;
+    Bool twoHeads;
     /*
      * Non-FIFO registers.
      */
+    volatile U032 *PCRTC0;
     volatile U032 *PCRTC;
-    volatile U032 *PRAMDAC;
+    volatile U032 *PRAMDAC0;
     volatile U032 *PFB;
     volatile U032 *PFIFO;
     volatile U032 *PGRAPH;
@@ -379,16 +456,17 @@ typedef struct _riva_hw_inst
     volatile U032 *FIFO;
     volatile U032 *CURSOR;
     volatile U032 *CURSORPOS;
-    volatile U032 *VBLANKENABLE;
-    volatile U032 *VBLANK;
+    volatile U008 *PCIO0;
     volatile U008 *PCIO;
     volatile U008 *PVIO;
+    volatile U008 *PDIO0;
     volatile U008 *PDIO;
+    volatile U032 *PRAMDAC;
     /*
      * Common chip functions.
      */
     int  (*Busy)(struct _riva_hw_inst *);
-    void (*CalcStateExt)(struct _riva_hw_inst *,struct _riva_hw_state *,int,int,int,int,int,int,int,int,int,int,int,int,int);
+    void (*CalcStateExt)(struct _riva_hw_inst *,struct _riva_hw_state *,int,int,int,int,int);
     void (*LoadStateExt)(struct _riva_hw_inst *,struct _riva_hw_state *);
     void (*UnloadStateExt)(struct _riva_hw_inst *,struct _riva_hw_state *);
     void (*SetStartAddress)(struct _riva_hw_inst *,U032);
@@ -421,17 +499,28 @@ typedef struct _riva_hw_state
     U032 bpp;
     U032 width;
     U032 height;
+    U032 interlace;
     U032 repaint0;
     U032 repaint1;
     U032 screen;
+    U032 scale;
+    U032 dither;
+    U032 extra;
     U032 pixel;
     U032 horiz;
     U032 arbitration0;
     U032 arbitration1;
     U032 vpll;
+    U032 vpll2;
+    U032 vpllB;
+    U032 vpll2B;
     U032 pllsel;
     U032 general;
+    U032 crtcOwner;
+    U032 head; 
+    U032 head2; 
     U032 config;
+    U032 cursorConfig;	
     U032 cursor0;
     U032 cursor1;
     U032 cursor2;
@@ -447,16 +536,16 @@ typedef struct _riva_hw_state
 /*
  * External routines.
  */
-int RivaGetConfig(RIVA_HW_INST *);
+int RivaGetConfig(RIVA_HW_INST *, unsigned int);
 /*
  * FIFO Free Count. Should attempt to yield processor if RIVA is busy.
  */
 
-#define RIVA_FIFO_FREE(hwinst,hwptr,cnt)                           \
-{                                                                  \
-   while ((hwinst).FifoFreeCount < (cnt))                          \
-	(hwinst).FifoFreeCount = (hwinst).hwptr->FifoFree >> 2;        \
-   (hwinst).FifoFreeCount -= (cnt);                                \
+#define RIVA_FIFO_FREE(hwinst,hwptr,cnt)                            \
+{                                                                   \
+    while ((hwinst).FifoFreeCount < (cnt))                          \
+        (hwinst).FifoFreeCount = (hwinst).hwptr->FifoFree >> 2;     \
+    (hwinst).FifoFreeCount -= (cnt);                                \
 }
 #endif /* __RIVA_HW_H__ */
 

@@ -221,7 +221,7 @@ static __inline__ void ypan_down(int unit, struct vc_data *conp,
 static void fbcon_bmove_rec(struct display *p, int sy, int sx, int dy, int dx,
 			    int height, int width, u_int y_break);
 
-static int fbcon_show_logo(void);
+int fbcon_show_logo(void);
 
 #ifdef CONFIG_MAC
 /*
@@ -2135,7 +2135,81 @@ static inline unsigned safe_shift(unsigned d,int n)
     return n<0 ? d>>-n : d<<n;
 }
 
-static int __init fbcon_show_logo( void )
+static int do_logo=1;
+static int do_timer_logo=0;
+
+void disable_logo(void)
+{
+  do_logo=0;
+}
+
+int fbcon_show_logo_internal(int turn);
+
+void maybe_show_logo(void)
+{
+  if (do_timer_logo && do_logo)
+    fbcon_show_logo_internal(1);
+}
+
+static int offset=0;
+static int dir=1;
+
+#define USE_OUR_LOGO 1
+#define FANCY_BOUNCE 1
+static int calc_logo_pos(struct display* p, int* xp, int* yp, int move)
+{
+  static int xpos=100;
+  static int ypos=0;
+  static int xfrac=0;
+  static int yfrac=0;
+  static int dx=2*65536;
+  static int dy=0;
+  static int tillturn=1;
+
+  int doturn;
+
+  if (move) {
+    xfrac+=dx;
+    yfrac+=dy;
+    xpos+=(xfrac>>16);
+    ypos+=(yfrac>>16);
+    xfrac&=0xffff;
+    yfrac&=0xffff;
+    
+    if (xpos<0) {
+      xpos=-xpos;
+      dx=-dx;
+    }
+    if (xpos>p->var.xres-LOGO_W) {
+      xpos=(p->var.xres-LOGO_W)-(xpos-(p->var.xres-LOGO_W));
+      dx=-dx;
+    }
+    
+    if (ypos>p->var.yres-LOGO_H) {
+      ypos=(p->var.yres-LOGO_H)-(ypos-(p->var.yres-LOGO_H));
+      dy=-dy;
+    }
+    else
+      dy+=3000;
+    dy-=(dy/4000);
+    dx-=(dx/8000);
+  }
+
+  *xp=xpos;
+  *yp=ypos;
+  doturn=!tillturn;
+  if (!tillturn)
+    tillturn=5;
+  else
+    tillturn--;
+  return doturn;
+}
+
+
+#define TURNUP 1
+#define TURNNEED 3
+
+int fbcon_show_logo_internal(int turn)
 {
     struct display *p = &fb_display[fg_console]; /* draw to vt in foreground */
     int depth = p->var.bits_per_pixel;
@@ -2143,21 +2217,33 @@ static int __init fbcon_show_logo( void )
     unsigned char *fb = p->screen_base;
     unsigned char *logo;
     unsigned char *dst, *src;
-    int i, j, n, x1, y1, x;
+    int i, j, n, x1, y1, x,y;
     int logo_depth, done = 0;
+    int offbytes=0;
+    static int turncount=0;
+    static int need_cmap=1;
 
     /* Return if the frame buffer is not mapped */
     if (!fb)
 	return 0;
-	
+    if (!do_logo)
+      return 0;
+
+    do_timer_logo=1;
     /*
      * Set colors if visual is PSEUDOCOLOR and we have enough colors, or for
      * DIRECTCOLOR
      * We don't have to set the colors for the 16-color logo, since that logo
      * uses the standard VGA text console palette
      */
-    if ((p->visual == FB_VISUAL_PSEUDOCOLOR && depth >= 8) ||
-	(p->visual == FB_VISUAL_DIRECTCOLOR && depth >= 24))
+    if (need_cmap) { /* only do this the first time */
+      if ((p->visual == FB_VISUAL_PSEUDOCOLOR && depth >= 8) ||
+	  (p->visual == FB_VISUAL_DIRECTCOLOR && depth >= 24)) {
+	int is_truecolor = (p->visual == FB_VISUAL_DIRECTCOLOR);
+	int use_256 = (!is_truecolor && depth >= 8) ||
+	  (is_truecolor && depth >= 24);
+	
+	offbytes=0;
 	for (i = 0; i < LINUX_LOGO_COLORS; i += n) {
 	    n = LINUX_LOGO_COLORS - i;
 	    if (n > 16)
@@ -2166,17 +2252,20 @@ static int __init fbcon_show_logo( void )
 	    palette_cmap.start = 32 + i;
 	    palette_cmap.len   = n;
 	    for( j = 0; j < n; ++j ) {
-		palette_cmap.red[j]   = (linux_logo_red[i+j] << 8) |
-					linux_logo_red[i+j];
-		palette_cmap.green[j] = (linux_logo_green[i+j] << 8) |
-					linux_logo_green[i+j];
-		palette_cmap.blue[j]  = (linux_logo_blue[i+j] << 8) |
-					linux_logo_blue[i+j];
+		palette_cmap.red[j]   = (linux_logo_red[i+j+offbytes] << 8) |
+					linux_logo_red[i+j+offbytes];
+		palette_cmap.green[j] = (linux_logo_green[i+j+offbytes] << 8) |
+					linux_logo_green[i+j+offbytes];
+		palette_cmap.blue[j]  = (linux_logo_blue[i+j+offbytes] << 8) |
+					linux_logo_blue[i+j+offbytes];
 	    }
 	    p->fb_info->fbops->fb_set_cmap(&palette_cmap, 1, fg_console,
 					   p->fb_info);
 	}
-	
+      }
+    }
+    need_cmap=0;
+
     if (depth >= 8) {
 	logo = linux_logo;
 	logo_depth = 8;
@@ -2193,9 +2282,52 @@ static int __init fbcon_show_logo( void )
     if (p->fb_info->fbops->fb_rasterimg)
     	p->fb_info->fbops->fb_rasterimg(p->fb_info, 1);
 
+#if !USE_OUR_LOGO
+    y=0;
     for (x = 0; x < smp_num_cpus * (LOGO_W + 8) &&
-    	 x < p->var.xres - (LOGO_W + 8); x += (LOGO_W + 8)) {
-    	 
+	   x < p->var.xres - (LOGO_W + 8); x += (LOGO_W + 8)) { 
+#else
+    
+    if (p->var.xres>LOGO_W)
+    { 
+#ifdef LOGO_FRAMES
+      static int lastjiffies;
+      int nowjiffies=jiffies;
+
+      x=0;
+      y=0;
+#if FANCY_BOUNCE
+      if (console_loglevel<1)
+	calc_logo_pos(p,&x,&y,turn);
+#endif
+      offbytes=offset;
+
+      if (turn) {
+	turncount+=TURNUP;
+	if (turncount>=TURNNEED) 
+	  turncount-=TURNNEED;
+	else
+	  turn=0;
+      }
+      
+
+      if (turn) {
+	if (nowjiffies!=lastjiffies) {
+	  offset=(offset+1)%LOGO_FRAMES;
+	  lastjiffies=nowjiffies;
+	}
+      }
+#else
+      offbytes=0;
+      x=offset;
+      y=0;
+      if (offset==p->var.xres-LOGO_W && dir==1)
+	dir=-1;
+      if (offset==0 && dir==-1)
+	dir=1;
+      offset+=dir;
+#endif
+#endif    
 #if defined(CONFIG_FBCON_CFB16) || defined(CONFIG_FBCON_CFB24) || \
     defined(CONFIG_FBCON_CFB32) || defined(CONFIG_FB_SBUS)
         if (p->visual == FB_VISUAL_DIRECTCOLOR) {
@@ -2210,10 +2342,10 @@ static int __init fbcon_show_logo( void )
 
 	    if (depth >= 24 && (depth % 8) == 0) {
 		/* have at least 8 bits per color */
-		src = logo;
+		src = logo+offbytes*LOGO_W*LOGO_H;
 		bdepth = depth/8;
 		for( y1 = 0; y1 < LOGO_H; y1++ ) {
-		    dst = fb + y1*line + x*bdepth;
+		    dst = fb + (y1+y)*line + x*bdepth;
 		    for( x1 = 0; x1 < LOGO_W; x1++, src++ ) {
 			val = (*src << redshift) |
 			      (*src << greenshift) |
@@ -2289,13 +2421,15 @@ static int __init fbcon_show_logo( void )
 	    greenshift = p->var.green.offset - (8-p->var.green.length);
 	    blueshift  = p->var.blue.offset  - (8-p->var.blue.length);
 
-	    src = logo;
+	    src = logo+offbytes*LOGO_W*LOGO_H;
 	    for( y1 = 0; y1 < LOGO_H; y1++ ) {
-		dst = fb + y1*line + x*bdepth;
+		dst = fb + (y1+y)*line + x*bdepth;
 		for( x1 = 0; x1 < LOGO_W; x1++, src++ ) {
 		    val = safe_shift((linux_logo_red[*src-32]   & redmask), redshift) |
 		          safe_shift((linux_logo_green[*src-32] & greenmask), greenshift) |
 		          safe_shift((linux_logo_blue[*src-32]  & bluemask), blueshift);
+		    if (!(*src))
+		        val=0;
 		    if (bdepth == 4 && !((long)dst & 3)) {
 			/* Some cards require 32bit access */
 			fb_writel (val, dst);
@@ -2319,9 +2453,9 @@ static int __init fbcon_show_logo( void )
 #endif
 #if defined(CONFIG_FBCON_CFB4)
 	if (depth == 4 && p->type == FB_TYPE_PACKED_PIXELS) {
-		src = logo;
+   	        src = logo+offbytes*LOGO_W*LOGO_H;
 		for( y1 = 0; y1 < LOGO_H; y1++) {
-			dst = fb + y1*line + x/2;
+			dst = fb + (y1+y)*line + x/2;
 			for( x1 = 0; x1 < LOGO_W/2; x1++) {
 				u8 q = *src++;
 				q = (q << 4) | (q >> 4);
@@ -2335,9 +2469,9 @@ static int __init fbcon_show_logo( void )
 	if (depth == 8 && p->type == FB_TYPE_PACKED_PIXELS) {
 	    /* depth 8 or more, packed, with color registers */
 		
-	    src = logo;
+	    src = logo+offbytes*LOGO_W*LOGO_H;
 	    for( y1 = 0; y1 < LOGO_H; y1++ ) {
-		dst = fb + y1*line + x;
+		dst = fb + (y1+y)*line + x;
 		for( x1 = 0; x1 < LOGO_W; x1++ )
 		    fb_writeb (*src++, dst++);
 	    }
@@ -2497,6 +2631,11 @@ pm_fbcon_request(struct pm_dev *dev, pm_request_t rqst, void *data)
 }
 #endif /* CONFIG_PM */
 
+int fbcon_show_logo(void) 
+{
+  return fbcon_show_logo_internal(0);
+}
+
 /*
  *  The console `switch' structure for the frame buffer based console
  */
@@ -2549,6 +2688,7 @@ EXPORT_SYMBOL(fb_display);
 EXPORT_SYMBOL(fbcon_redraw_bmove);
 EXPORT_SYMBOL(fbcon_redraw_clear);
 EXPORT_SYMBOL(fbcon_dummy);
+EXPORT_SYMBOL(fbcon_show_logo);
 EXPORT_SYMBOL(fb_con);
 
 MODULE_LICENSE("GPL");

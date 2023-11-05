@@ -132,6 +132,7 @@ obj-$(CONFIG_ES3210) += es3210.o 8390.o
 obj-$(CONFIG_LNE390) += lne390.o 8390.o
 obj-$(CONFIG_NE3210) += ne3210.o 8390.o
 obj-$(CONFIG_NET_SB1250_MAC) += sb1250-mac.o
+obj-$(CONFIG_FORCEDETH) += forcedeth.o
 
 obj-$(CONFIG_PPP) += ppp_generic.o slhc.o
 obj-$(CONFIG_PPP_ASYNC) += ppp_async.o
@@ -238,4 +239,5 @@ clean:
 
 rcpci.o: $(rcpci-objs)
 	$(LD) -r -o $@ $(rcpci-objs)
+
 

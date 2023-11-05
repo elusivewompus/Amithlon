@@ -939,8 +939,12 @@ int __init kbd_init(void)
 
 	ttytab = console_driver.table;
 
-	kbd_init_hw();
-
+	/* Note: We want the kernel to leave the hardware alone, but still
+	   do all the other keyboard related stuff --- so that it can do
+	   the magic_keyboard receiving. */
+#if 0
+	 kbd_init_hw();  /* Woah! UAE will handle the hardware! */
+#endif
 	tasklet_enable(&keyboard_tasklet);
 	tasklet_schedule(&keyboard_tasklet);
 	

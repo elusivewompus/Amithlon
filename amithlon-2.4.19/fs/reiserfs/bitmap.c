@@ -1,8 +1,13 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
+//
+// Ext2's preallocation idea was used for current reiserfs preallocation
+// preallocation
+//
 
-#include <linux/config.h>
+#ifdef __KERNEL__
+
 #include <linux/sched.h>
 #include <linux/reiserfs_fs.h>
 #include <linux/locks.h>
@@ -12,7 +17,7 @@
 #ifdef CONFIG_REISERFS_CHECK
 
 /* this is a safety check to make sure
-** blocks are reused properly.  used for debugging only.
+** blocks are reused properly.
 **
 ** this checks, that block can be reused, and it has correct state
 **   (free or busy) 
@@ -82,9 +87,7 @@ static inline void get_bit_address (struct super_block * s, unsigned long block,
 
 /* There would be a modest performance benefit if we write a version
    to free a list of blocks at once. -Hans */
-				/* I wonder if it would be less modest
-                                   now that we use journaling. -Hans */
-static void _reiserfs_free_block (struct reiserfs_transaction_handle *th, unsigned long block)
+void reiserfs_free_block (struct reiserfs_transaction_handle *th, unsigned long block)
 {
     struct super_block * s = th->t_super;
     struct reiserfs_super_block * rs;
@@ -248,7 +251,7 @@ retry:
       search_start = 0; /* caller will reset search_start for itself also. */
       get_bit_address (s, search_start, bmap_nr, offset);
       if (find_forward (s, bmap_nr,offset,for_unformatted) == 0) {
-	if (for_unformatted) {	/* why only unformatted nodes? -Hans */
+	if (for_unformatted) {
 	  if (retry_count == 0) {
 	    /* we've got a chance that flushing async commits will free up
 	    ** some space.  Sync then retry
@@ -297,8 +300,6 @@ retry:
 
    spare space is used only when priority is set to 1. reiserfsck has
    its own reiserfs_new_blocknrs, which can use reserved space
-
-   exactly what reserved space?  the SPARE_SPACE?  if so, please comment reiserfs.h.
 
    Give example of who uses spare space, and say that it is a deadlock
    avoidance mechanism.  -Hans */
@@ -400,8 +401,8 @@ free_and_return:
       goto free_and_return ;
     }
     search_start = new_block ;
-    if (search_start >= reiserfs_get_journal_block(s) &&
-        search_start < (reiserfs_get_journal_block(s) + JOURNAL_BLOCK_COUNT)) {
+    if (search_start >= SB_JOURNAL_BLOCK(s) &&
+        search_start < (SB_JOURNAL_BLOCK(s) + JOURNAL_BLOCK_COUNT)) {
 	reiserfs_warning("vs-4130: reiserfs_new_blocknrs: trying to allocate log block %lu\n",
 			 search_start) ;
 	search_start++ ;
@@ -431,130 +432,94 @@ free_and_return:
 
   reiserfs_prepare_for_journal(s, SB_BUFFER_WITH_SB(s), 1) ;
   /* update free block count in super block */
-  PUT_SB_FREE_BLOCKS( s, SB_FREE_BLOCKS(s) - init_amount_needed );
+  s->u.reiserfs_sb.s_rs->s_free_blocks = cpu_to_le32 (SB_FREE_BLOCKS (s) - init_amount_needed);
   journal_mark_dirty (th, s, SB_BUFFER_WITH_SB (s));
   s->s_dirt = 1;
 
   return CARRY_ON;
 }
 
-// this is called only by get_empty_nodes
+// this is called only by get_empty_nodes with for_preserve_list==0
 int reiserfs_new_blocknrs (struct reiserfs_transaction_handle *th, unsigned long * free_blocknrs,
 			    unsigned long search_start, int amount_needed) {
-  return do_reiserfs_new_blocknrs(th, free_blocknrs, search_start, amount_needed, 0/*priority*/, 0/*for_formatted*/, 0/*for_prealloc */) ;
+  return do_reiserfs_new_blocknrs(th, free_blocknrs, search_start, amount_needed, 0/*for_preserve_list-priority*/, 0/*for_formatted*/, 0/*for_prealloc */) ;
 }
 
 
-// called by get_new_buffer and by reiserfs_get_block with amount_needed == 1
+// called by get_new_buffer and by reiserfs_get_block with amount_needed == 1 and for_preserve_list == 0
 int reiserfs_new_unf_blocknrs(struct reiserfs_transaction_handle *th, unsigned long * free_blocknrs,
 			      unsigned long search_start) {
+#if 0
+#ifdef REISERFS_PREALLOCATE
+  unsigned long border = (SB_BLOCK_COUNT(th->t_super) / 10); 
+  if ( search_start < border ) search_start=border;
+#endif
+#endif
+
   return do_reiserfs_new_blocknrs(th, free_blocknrs, search_start, 
                                   1/*amount_needed*/,
-				  0/*priority*/, 
+				  0/*for_preserve_list-priority*/, 
 				  1/*for formatted*/,
 				  0/*for prealloc */) ;
 }
 
 #ifdef REISERFS_PREALLOCATE
+				/* So do I understand correctly that
+                                   in this code we snag the largest
+                                   contiguous extent we can that is
+                                   not more than 128 blocks, and which
+                                   is at least 2 blocks? -Hans */
+
 
 /* 
-** We pre-allocate 8 blocks.  Pre-allocation is used for files > 16 KB only.
-** This lowers fragmentation on large files by grabbing a contiguous set of
-** blocks at once.  It also limits the number of times the bitmap block is
-** logged by making X number of allocation changes in a single transaction.
-**
-** We are using a border to divide the disk into two parts.  The first part
-** is used for tree blocks, which have a very high turnover rate (they
-** are constantly allocated then freed)
-**
-** The second part of the disk is for the unformatted nodes of larger files.
-** Putting them away from the tree blocks lowers fragmentation, and makes
-** it easier to group files together.  There are a number of different
-** allocation schemes being tried right now, each is documented below.
-**
-** A great deal of the allocator's speed comes because reiserfs_get_block
-** sends us the block number of the last unformatted node in the file.  Once
-** a given block is allocated past the border, we don't collide with the
-** blocks near the search_start again.
-** 
+   The function pre-allocate 8 blocks. We can change this later. 
+   Pre-allocation is used for files > 16 KB only.
 */
+				/* how about taking the time to explain preallocation here? -Hans */
 int reiserfs_new_unf_blocknrs2 (struct reiserfs_transaction_handle *th, 
 				struct inode       * p_s_inode,
 				unsigned long      * free_blocknrs,
 				unsigned long        search_start)
 {
-  int ret=0, blks_gotten=0;
-  unsigned long border = 0;
-  unsigned long bstart = 0;
-  unsigned long hash_in, hash_out;
-  unsigned long saved_search_start=search_start;
-  int allocated[PREALLOCATION_SIZE];
-  int blks;
+  int i, n, ret=0;
+  int allocated[8], blks;
+				/* Comments are okay with me to use. -Hans */
 
-  if (!reiserfs_no_border(th->t_super)) {
-    /* we default to having the border at the 10% mark of the disk.  This
-    ** is an arbitrary decision and it needs tuning.  It also needs a limit
-    ** to prevent it from taking too much space on huge drives.
-    */
-    bstart = (SB_BLOCK_COUNT(th->t_super) / 10); 
-  }
-  if (!reiserfs_no_unhashed_relocation(th->t_super)) {
-    /* this is a very simple first attempt at preventing too much grouping
-    ** around the border value.  Since k_dir_id is never larger than the
-    ** highest allocated oid, it is far from perfect, and files will tend
-    ** to be grouped towards the start of the border
-    */
-    border = le32_to_cpu(INODE_PKEY(p_s_inode)->k_dir_id) % (SB_BLOCK_COUNT(th->t_super) - bstart - 1) ;
-  } else if (!reiserfs_hashed_relocation(th->t_super)) {
-      hash_in = le32_to_cpu((INODE_PKEY(p_s_inode))->k_dir_id);
-				/* I wonder if the CPU cost of the
-                                   hash will obscure the layout
-                                   effect? Of course, whether that
-                                   effect is good or bad we don't
-                                   know.... :-) */
-      
-      hash_out = keyed_hash(((char *) (&hash_in)), 4);
-      border = hash_out % (SB_BLOCK_COUNT(th->t_super) - bstart - 1) ;
-  }
+				/* so why have we made this one / 10 */
+  unsigned long bstart = (SB_BLOCK_COUNT(th->t_super) / 10); 
+				/* and this one hashed? */
+				/* how about we have a policy of explaining the rationale behind the algorithms for all of our code? */
+				/* please perform benchmarking of
+                                   hashing by objectid instead of
+                                   k_dir_id, just to confirm that it
+                                   is helpful not harmful to put
+                                   related large files all together.
+                                   It might be harmful, I can argue it
+                                   both ways, we don't know until we
+                                   test. -Hans. */
+  unsigned long border = (INODE_PKEY(p_s_inode)->k_dir_id) % 
+                         (SB_BLOCK_COUNT(th->t_super) - bstart - 1) ;
   border += bstart ;
-  allocated[0] = 0 ; /* important.  Allows a check later on to see if at
-                      * least one block was allocated.  This prevents false
-		      * no disk space returns
+
+  allocated[0] = 0 ; /* important.  catches a good allocation when 
+                      * first prealloc works, and later one fails
 		      */
 
+				/* It would be interesting to instead
+                                   try putting all unformatted nodes
+                                   after the first 1/3 of the disk and
+                                   benchmark, as it would put
+                                   formatted nodes closer to the log on
+                                   single disk drive machines. */
   if ( (p_s_inode->i_size < 4 * 4096) || 
        !(S_ISREG(p_s_inode->i_mode)) )
     {
-      if ( search_start < border 
-	   || (
-				/* allow us to test whether it is a
-                                   good idea to prevent files from
-                                   getting too far away from their
-                                   packing locality by some unexpected
-                                   means.  This might be poor code for
-                                   directories whose files total
-                                   larger than 1/10th of the disk, and
-                                   it might be good code for
-                                   suffering from old insertions when the disk
-                                   was almost full. */
-               /* changed from !reiserfs_test3(th->t_super), which doesn't
-               ** seem like a good idea.  Think about adding blocks to
-               ** a large file.  If you've allocated 10% of the disk
-               ** in contiguous blocks, you start over at the border value
-               ** for every new allocation.  This throws away all the
-               ** information sent in about the last block that was allocated
-               ** in the file.  Not a good general case at all.
-               ** -chris
-               */
-	       reiserfs_test4(th->t_super) && 
-	       (search_start > border + (SB_BLOCK_COUNT(th->t_super) / 10))
-	       )
-	   )
-	search_start=border;
+      if ( search_start < border ) search_start=border;
   
       ret = do_reiserfs_new_blocknrs(th, free_blocknrs, search_start, 
 				     1/*amount_needed*/, 
-				     0/*use reserved blocks for root */,
+				/* someone please remove the preserve list detritus. -Hans */
+				     0/*for_preserve_list-priority*/, 
 				     1/*for_formatted*/,
 				     0/*for prealloc */) ;  
       return ret;
@@ -573,11 +538,9 @@ int reiserfs_new_unf_blocknrs2 (struct reiserfs_transaction_handle *th,
     return ret;
   }
 
-				/* else get a new preallocation for the file */
+				/* else  get a new preallocation for the file */
   reiserfs_discard_prealloc (th, p_s_inode);
-  /* this uses the last preallocated block as the search_start.  discard
-  ** prealloc does not zero out this number.
-  */
+				/* This does what? -Hans */
   if (search_start <= p_s_inode->u.reiserfs_i.i_prealloc_block) {
     search_start = p_s_inode->u.reiserfs_i.i_prealloc_block;
   }
@@ -597,31 +560,33 @@ int reiserfs_new_unf_blocknrs2 (struct reiserfs_transaction_handle *th,
   }
 
   *free_blocknrs = 0;
-  blks = PREALLOCATION_SIZE-1;
-  for (blks_gotten=0; blks_gotten<PREALLOCATION_SIZE; blks_gotten++) {
+				/* Don't use numbers like n, use numbers like PREALLOCATION_SIZE, and put them in the reiserfs_fs.h file. -Hans */
+  n = 8;
+  blks = n-1;
+  for (i=0; i<n; i++) {
     ret = do_reiserfs_new_blocknrs(th, free_blocknrs, search_start, 
 				   1/*amount_needed*/, 
-				   0/*for root reserved*/,
+				   0/*for_preserve_list-priority*/, 
 				   1/*for_formatted*/,
-				   (blks_gotten > 0)/*must_be_contiguous*/) ;
-    /* if we didn't find a block this time, adjust blks to reflect
-    ** the actual number of blocks allocated
-    */ 
+				   (i > 0)/*must_be_contiguous*/) ;
+				/* comment needed -Hans */
     if (ret != CARRY_ON) {
-      blks = blks_gotten > 0 ? (blks_gotten - 1) : 0 ;
+      blks = i > 0 ? (i - 1) : 0 ;
       break ;
     }
-    allocated[blks_gotten]= *free_blocknrs;
+    allocated[i]= *free_blocknrs;
 #ifdef CONFIG_REISERFS_CHECK
-    if ( (blks_gotten>0) && (allocated[blks_gotten] - allocated[blks_gotten-1]) != 1 ) {
+    if ( (i>0) && (allocated[i] - allocated[i-1]) != 1 ) {
+      /* this is not a standard reiserfs_warning message -Hans */
       /* this should be caught by new_blocknrs now, checking code */
-      reiserfs_warning("yura-1, reiserfs_new_unf_blocknrs2: pre-allocated not contiguous set of blocks!\n") ;
-      reiserfs_free_block(th, allocated[blks_gotten]);
-      blks = blks_gotten-1; 
+      /* use your email name of yura, not yr, and I don't believe you have written 4050 error messages.... -Hans */
+      reiserfs_warning("yura-4160, reiserfs_new_unf_blocknrs2: pre-allocated not contiguous set of blocks!\n") ;
+      reiserfs_free_block(th, allocated[i]);
+      blks = i-1; 
       break;
     }
 #endif
-    if (blks_gotten==0) {
+    if (i==0) {
       p_s_inode->u.reiserfs_i.i_prealloc_block = *free_blocknrs;
     }
     search_start = *free_blocknrs; 
@@ -648,64 +613,26 @@ int reiserfs_new_unf_blocknrs2 (struct reiserfs_transaction_handle *th,
   ** unless it has already successfully allocated at least one block.
   ** Just in case, we translate into a return value the rest of the
   ** filesystem can understand.
-  **
-  ** It is an error to change this without making the
-  ** rest of the filesystem understand NO_MORE_UNUSED_CONTIGUOUS_BLOCKS
-  ** If you consider it a bug to return NO_DISK_SPACE here, fix the rest
-  ** of the fs first.
   */
   if (ret == NO_MORE_UNUSED_CONTIGUOUS_BLOCKS) {
-#ifdef CONFIG_REISERFS_CHECK
-    reiserfs_warning("reiser-2015: this shouldn't happen, may cause false out of disk space error");
-#endif
-     return NO_DISK_SPACE; 
+    return NO_DISK_SPACE ;
   }
   return ret;
 }
 
+
 //
-// a portion of this function, was derived from minix or ext2's
-// analog. You should be able to tell which portion by looking at the
-// ext2 code and comparing. 
-static void __discard_prealloc (struct reiserfs_transaction_handle * th,
-				struct inode * inode)
-{
-  unsigned long save = inode->u.reiserfs_i.i_prealloc_block ;
-  while (inode->u.reiserfs_i.i_prealloc_count > 0) {
-    reiserfs_free_prealloc_block(th,inode->u.reiserfs_i.i_prealloc_block);
-    inode->u.reiserfs_i.i_prealloc_block++;
-    inode->u.reiserfs_i.i_prealloc_count --;
-  }
-  inode->u.reiserfs_i.i_prealloc_block = save ; 
-  list_del (&(inode->u.reiserfs_i.i_prealloc_list));
-}
-
-
+// this is ext2_discard_prealloc
+//
 void reiserfs_discard_prealloc (struct reiserfs_transaction_handle *th, 
 				struct inode * inode)
 {
-#ifdef CONFIG_REISERFS_CHECK
-  if (inode->u.reiserfs_i.i_prealloc_count < 0)
-     reiserfs_warning("zam-4001:" __FUNCTION__ ": inode has negative prealloc blocks count.\n");
-#endif  
     if (inode->u.reiserfs_i.i_prealloc_count > 0) {
-    __discard_prealloc(th, inode);
-  }
+      while (inode->u.reiserfs_i.i_prealloc_count--) {
+	reiserfs_free_block(th,inode->u.reiserfs_i.i_prealloc_block);
+	inode->u.reiserfs_i.i_prealloc_block++;
       }
-
-void reiserfs_discard_all_prealloc (struct reiserfs_transaction_handle *th)
-{
-  struct list_head * plist = &SB_JOURNAL(th->t_super)->j_prealloc_list;
-  struct inode * inode;
-  
-  while (!list_empty(plist)) {
-    inode = list_entry(plist->next, struct inode, u.reiserfs_i.i_prealloc_list);
-#ifdef CONFIG_REISERFS_CHECK
-    if (!inode->u.reiserfs_i.i_prealloc_count) {
-      reiserfs_warning("zam-4001:" __FUNCTION__ ": inode is in prealloc list but has no preallocated blocks.\n");
     }
-#endif    
-    __discard_prealloc(th, inode);
-    }
+    inode->u.reiserfs_i.i_prealloc_count = 0;
 }
 #endif

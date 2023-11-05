@@ -8,6 +8,7 @@
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/netlink.h>
+#include <net/slhc.h>
 
 extern int slip_init_ctrl_dev(void);
 extern int x25_asy_init_ctrl_dev(void);

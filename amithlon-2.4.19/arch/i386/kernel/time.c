@@ -71,6 +71,15 @@ static int delay_at_last_interrupt;
 
 static unsigned long last_tsc_low; /* lsb 32 bits of Time Stamp Counter */
 
+static unsigned int handle_hiprec=0; /* As long as this is 0, we do normal
+					jiffies handling */
+static unsigned long long jiffie_time; /* When to do jiffies */
+static unsigned long long jiffie_add;   /* Cycles per jiffie */
+static unsigned long long margin;
+static unsigned long long last_target;
+
+unsigned long current_latch=~0; /* The current latch value for the timer chip */
+
 /* Cached *multiplier* to convert TSC counts to microseconds.
  * (see the equation below).
  * Equal to 2^32 * (1 / (clocks per usec) ).
@@ -383,8 +392,87 @@ static int set_rtc_mmss(unsigned long nowtime)
 
 /* last time the cmos clock got updated */
 static long last_rtc_update;
+static int use_tsc;
 
 int timer_ack;
+
+
+static inline int do_hiprec_timer(int reset_always)
+{
+	if (use_tsc)
+	{ /* Handle the high precision "timer" the is kludged on
+	     via the irq.c char driver */
+	  unsigned long low,high;
+	  unsigned long long now;
+	  unsigned long newlatch=LATCH;
+	  unsigned long long nextev;
+	  unsigned long long target;
+	  int do_jiffie=0;
+
+	  nextev=~0;
+	  rdtsc(low,high);
+	  now=(unsigned long long)low | ((unsigned long long)high)<<32;
+
+	  if(uae_alert<=now) {
+	    while (1) {
+	      if (!handle_hiprec) {
+		/* First time */
+		jiffie_time=now; 
+		jiffie_add=(unsigned long)cpu_khz/HZ*1000;
+		handle_hiprec=1; 
+		margin=(unsigned long)cpu_khz/200; /* 5us */
+	      }
+	      nextev=uae_nextevent;
+	      if (nextev<=now+margin) {
+		uae_trigger();
+	      }
+	      else 
+		break; /* Get out of loop */
+	    }
+	  }
+	  if (!handle_hiprec || jiffie_time<=now+margin*32) {
+	    do_jiffie=1;
+	    jiffie_time+=jiffie_add;
+	  }
+	  if (nextev<=jiffie_time+(jiffie_add>>1)) { 
+	    target=nextev;
+	  }
+	  else {
+	    target=jiffie_time;
+	  }
+	  if (target<now) { /* Uh-oh! */
+	    target=now;
+	  }
+	  last_target=target;
+	  /* Talk about lousy precision! FIXME */
+	  newlatch=(unsigned long)(target-now)*16/(125*cpu_khz/(CLOCK_TICK_RATE/128));
+	  if (newlatch<3) /* This is probably pushing it. We might lose
+			     some interrupts, but then, who cares? */
+	    newlatch=3;
+#if 1	  
+	  if (reset_always ||
+	      ((newlatch<current_latch-5 || newlatch>current_latch+5) &&
+	       handle_hiprec)) {
+	    /* It's different enough for us to actually change the value */
+	    spin_lock(&i8259A_lock);
+	    outb_p(0x34,0x43);		/* binary, mode 2, LSB/MSB, ch 0 */
+	    outb_p(newlatch & 0xff , 0x40);	/* LSB */
+	    outb(newlatch >> 8 , 0x40);	/* MSB */
+	    spin_unlock(&i8259A_lock);
+	    current_latch=newlatch;
+	  }
+
+	  if (!do_jiffie)
+	    return 1;
+#endif
+	}
+	return 0;
+}
+	
+void schedule_hiprec(void)
+{
+  do_hiprec_timer(1);
+}
 
 /*
  * timer_interrupt() needs to keep up the real-time clock,
@@ -412,7 +500,11 @@ static inline void do_timer_interrupt(int irq, void *dev_id, struct pt_regs *reg
 	/* Clear the interrupt */
 	co_cpu_write(CO_CPU_STAT,co_cpu_read(CO_CPU_STAT) & ~CO_STAT_TIMEINTR);
 #endif
+	if (do_hiprec_timer(0))
+	  return;
+
 	do_timer(regs);
+	maybe_show_logo();
 /*
  * In the SMP case we use the local APIC timer interrupt to do the
  * profiling, except when we simulate SMP mode on a uniprocessor
@@ -458,7 +550,6 @@ static inline void do_timer_interrupt(int irq, void *dev_id, struct pt_regs *reg
 #endif
 }
 
-static int use_tsc;
 
 /*
  * This is the same as the above, except we _also_ save the current
@@ -501,6 +592,7 @@ static void timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 
 		count = inb_p(0x40);    /* read the latched count */
 		count |= inb(0x40) << 8;
+		
 		spin_unlock(&i8253_lock);
 
 		count = ((LATCH-1) - count) * TICK_SIZE;

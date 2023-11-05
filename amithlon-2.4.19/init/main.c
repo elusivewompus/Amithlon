@@ -387,6 +387,7 @@ asmlinkage void __init start_kernel(void)
 	sti();
 	calibrate_delay();
 #ifdef CONFIG_BLK_DEV_INITRD
+	printk("looking at initrd early on!\n");
 	if (initrd_start && !initrd_below_start_ok &&
 			initrd_start < min_low_pfn << PAGE_SHIFT) {
 		printk(KERN_CRIT "initrd overwritten (0x%08lx < 0x%08lx) - "

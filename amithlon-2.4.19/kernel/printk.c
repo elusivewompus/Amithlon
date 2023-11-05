@@ -149,7 +149,23 @@ static int __init console_setup(char *str)
 	return 1;
 }
 
+
+/*
+ *	Set console log level at boot time
+ */
+static int __init console_level_setup(char *str)
+{
+  int level=0;
+
+  while (str[0] >= '0' && str[0] <= '9') {
+    level=10*level+str[0]-'0';
+    str++;
+  }
+  console_loglevel = level;
+}
+
 __setup("console=", console_setup);
+__setup("console_level=", console_level_setup);
 
 /*
  * Commands to do_syslog:
@@ -164,6 +180,7 @@ __setup("console=", console_setup);
  * 	7 -- Enable printk's to console
  *	8 -- Set level of messages printed to console
  *	9 -- Return number of unread characters in the log buffer
+ *    102 -- same as 2, but non-blocking
  */
 int do_syslog(int type, char * buf, int len)
 {
@@ -177,6 +194,7 @@ int do_syslog(int type, char * buf, int len)
 		break;
 	case 1:		/* Open log */
 		break;
+	case 102:
 	case 2:		/* Read from log */
 		error = -EINVAL;
 		if (!buf || len < 0)
@@ -187,12 +205,13 @@ int do_syslog(int type, char * buf, int len)
 		error = verify_area(VERIFY_WRITE,buf,len);
 		if (error)
 			goto out;
-		error = wait_event_interruptible(log_wait, (log_start - log_end));
+		error = wait_event_interruptible(log_wait, 
+						 log_start-log_end||(type==102));
 		if (error)
 			goto out;
 		i = 0;
 		spin_lock_irq(&logbuf_lock);
-		while ((log_start != log_end) && i < len) {
+		while (log_start != log_end && i < len) {
 			c = LOG_BUF(log_start);
 			log_start++;
 			spin_unlock_irq(&logbuf_lock);
@@ -298,6 +317,9 @@ asmlinkage long sys_syslog(int type, char * buf, int len)
 		return -EPERM;
 	return do_syslog(type, buf, len);
 }
+
+/* This (and where it is used) really belong into #ifdef's. Too lazy :/ */
+extern int fbcon_show_logo(void);
 
 /*
  * Call the console drivers on a range of log_buf
@@ -471,6 +493,7 @@ asmlinkage int printk(const char *fmt, ...)
 		spin_unlock_irqrestore(&logbuf_lock, flags);
 	}
 out:
+	fbcon_show_logo(); /* move the logo around */
 	return printed_len;
 }
 EXPORT_SYMBOL(printk);

@@ -1,12 +1,19 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
 
-#include <linux/config.h>
+#ifdef __KERNEL__
+
 #include <asm/uaccess.h>
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/reiserfs_fs.h>
+
+#else
+
+#include "nokernel.h"
+
+#endif
 
 /* these are used in do_balance.c */
 

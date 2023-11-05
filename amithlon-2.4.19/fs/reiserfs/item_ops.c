@@ -1,15 +1,22 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 2000 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
+
+#ifdef __KERNEL__
 
 #include <linux/sched.h>
 #include <linux/reiserfs_fs.h>
 
-// this contains item handlers for old item types: sd, direct,
+#else
+
+#include "nokernel.h"
+
+#endif
+
+
+// this conatins item hadlers for old item types: sd, direct,
 // indirect, directory
 
-/* and where are the comments? how about saying where we can find an
-   explanation of each item handler method? -Hans */
 
 //////////////////////////////////////////////////////////////////////////////
 // stat data functions
@@ -22,8 +29,6 @@ static int sd_bytes_number (struct item_head * ih, int block_size)
 static void sd_decrement_key (struct cpu_key * key)
 {
     key->on_disk_key.k_objectid --;
-    set_cpu_key_k_type (key, TYPE_ANY);
-    set_cpu_key_k_offset(key, (loff_t)(-1));
 }
 
 static int sd_is_left_mergeable (struct key * key, unsigned long bsize)
@@ -48,15 +53,13 @@ static void sd_print_item (struct item_head * ih, char * item)
     if (stat_data_v1 (ih)) {
       	struct stat_data_v1 * sd = (struct stat_data_v1 *)item;
 
-	printk ("\t0%-6o | %6u | %2u | %d | %s\n", sd_v1_mode(sd),
-                sd_v1_size(sd), sd_v1_nlink(sd), sd_v1_first_direct_byte(sd),
-                print_time( sd_v1_mtime(sd) ) );
+	printk ("\t0%-6o | %6u | %2u | %d | %s\n", sd->sd_mode, sd->sd_size,
+		sd->sd_nlink, sd->sd_first_direct_byte, print_time (sd->sd_mtime));
     } else {
 	struct stat_data * sd = (struct stat_data *)item;
 
-	printk ("\t0%-6o | %6Lu | %2u | %d | %s\n", sd_v2_mode(sd),
-            (unsigned long long)sd_v2_size(sd), sd_v2_nlink(sd),
-            sd_v2_rdev(sd), print_time(sd_v2_mtime(sd)));
+	printk ("\t0%-6o | %6Lu | %2u | %d | %s\n", sd->sd_mode, sd->sd_size,
+		sd->sd_nlink, sd->u.sd_rdev, print_time (sd->sd_mtime));
     }
 }
 
@@ -301,14 +304,14 @@ static void indirect_print_item (struct item_head * ih, char * item)
 
     unp = (__u32 *)item;
 
-    if (ih_item_len(ih) % UNFM_P_SIZE)
+    if (ih->ih_item_len % UNFM_P_SIZE)
 	printk ("indirect_print_item: invalid item len");  
 
-    printk ("%d pointers\n[ ", (int)I_UNFM_NUM (ih));
+    printk ("%d pointers\n[ ", I_UNFM_NUM (ih));
     for (j = 0; j < I_UNFM_NUM (ih); j ++) {
-	if (sequence_finished (prev, &num, get_block_num(unp, j))) {
+	if (sequence_finished (prev, &num, unp[j])) {
 	    print_sequence (prev, num);
-	    start_new_sequence (&prev, &num, get_block_num(unp, j));
+	    start_new_sequence (&prev, &num, unp[j]);
 	}
     }
     print_sequence (prev, num);
@@ -348,7 +351,7 @@ static int indirect_check_right (struct virtual_item * vi, int free)
 
 
 
-// return size in bytes of 'units' units. If first == 0 - calculate from the head (left), otherwise - from tail (right)
+// return size in bytes of 'units' units. If first == 0 - calculate from the head, othewise - form tail
 static int indirect_part_size (struct virtual_item * vi, int first, int units)
 {
     // unit of indirect item is byte (yet)
@@ -512,7 +515,6 @@ static int direntry_create_vi (struct virtual_node * vn,
 	BUG ();
 
 
-    dir_u->flags = 0;
     if (le_ih_k_offset (vi->vi_ih) == DOT_OFFSET)
 	dir_u->flags |= DIRENTRY_VI_FIRST_DIRENTRY_ITEM;
 
@@ -653,8 +655,8 @@ static void direntry_print_vi (struct virtual_item * vi)
     int i;
     struct direntry_uarea * dir_u = vi->vi_uarea;
 
-    reiserfs_warning ("DIRENTRY, index %d, type 0x%x, %h, flags 0x%x\n", 
-		      vi->vi_index, vi->vi_type, vi->vi_ih, dir_u->flags);
+    reiserfs_warning ("DIRENTRY, index %d, type 0x%x, %h\n", 
+		      vi->vi_index, vi->vi_type, vi->vi_ih);
     printk ("%d entries: ", dir_u->entry_count);
     for (i = 0; i < dir_u->entry_count; i ++)
 	printk ("%d ", dir_u->entry_sizes[i]);

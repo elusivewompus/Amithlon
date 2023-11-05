@@ -327,6 +327,19 @@ extern unsigned char keyboard_type;
 #define K_INCRCONSOLE	K(KT_SPEC,17)
 #define K_SPAWNCONSOLE	K(KT_SPEC,18)
 #define K_BARENUMLOCK	K(KT_SPEC,19)
+#define K_DECRVOL       K(KT_SPEC,20)
+#define K_INCRVOL       K(KT_SPEC,21)
+#define K_DECRLINE      K(KT_SPEC,22)
+#define K_INCRLINE      K(KT_SPEC,23)
+#define K_DECRCD        K(KT_SPEC,24)
+#define K_INCRCD        K(KT_SPEC,25)
+#define K_DECRPCM       K(KT_SPEC,26)
+#define K_INCRPCM       K(KT_SPEC,27)
+#define K_MUTEVOL       K(KT_SPEC,28)
+#define K_MUTELINE      K(KT_SPEC,29)
+#define K_MUTECD        K(KT_SPEC,30)
+#define K_MUTEPCM       K(KT_SPEC,31)
+
 
 #define K_ALLOCATED	K(KT_SPEC,126) /* dynamically allocated keymap */
 #define K_NOSUCHMAP	K(KT_SPEC,127) /* returned by KDGKBENT */

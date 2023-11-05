@@ -92,6 +92,7 @@
 #define DEVID_OSB4	((ide_pci_devid_t){PCI_VENDOR_ID_SERVERWORKS, PCI_DEVICE_ID_SERVERWORKS_OSB4IDE})
 #define DEVID_CSB5	((ide_pci_devid_t){PCI_VENDOR_ID_SERVERWORKS, PCI_DEVICE_ID_SERVERWORKS_CSB5IDE})
 #define DEVID_ITE8172G	((ide_pci_devid_t){PCI_VENDOR_ID_ITE,     PCI_DEVICE_ID_ITE_IT8172G})
+#define DEVID_VIA_SATA  ((ide_pci_devid_t){PCI_VENDOR_ID_VIA,	  PCI_DEVICE_ID_VIA_8237_SATA})
 
 #define	IDE_IGNORE	((void *)-1)
 #define IDE_NO_DRIVER	((void *)-2)
@@ -463,7 +464,9 @@ static ide_pci_device_t ide_pci_chipsets[] __initdata = {
         {DEVID_OSB4,    "ServerWorks OSB4",		PCI_SVWKS,	ATA66_SVWKS,	INIT_SVWKS,	NULL,		{{0x00,0x00,0x00}, {0x00,0x00,0x00}},	ON_BOARD,	0 },
 	{DEVID_CSB5,	"ServerWorks CSB5",		PCI_SVWKS,	ATA66_SVWKS,	INIT_SVWKS,	NULL,		{{0x00,0x00,0x00}, {0x00,0x00,0x00}},	ON_BOARD,	0 },
 	{DEVID_ITE8172G,"IT8172G",	PCI_IT8172,	NULL,	INIT_IT8172,	NULL,		{{0x00,0x00,0x00}, {0x40,0x00,0x01}},	ON_BOARD,	0 },
+	{DEVID_VIA_SATA,"VIA_SATA",	NULL,		NULL,		NULL,		NULL,		{{0x00,0x00,0x00}, {0x00,0x00,0x00}},	OFF_BOARD,	0},
 	{IDE_PCI_DEVID_NULL, "PCI_IDE",	NULL,		NULL,		NULL,		NULL,		{{0x00,0x00,0x00}, {0x00,0x00,0x00}}, 	ON_BOARD,	0 }};
+
 
 /*
  * This allows offboard ide-pci cards the enable a BIOS, verify interrupt
@@ -799,6 +802,7 @@ controller_ok:
 
 		if (IDE_PCI_DEVID_EQ(d->devid, DEVID_PDC20246) ||
 		    IDE_PCI_DEVID_EQ(d->devid, DEVID_PDC20262) ||
+		    IDE_PCI_DEVID_EQ(d->devid, DEVID_VIA_SATA) ||
 		    IDE_PCI_DEVID_EQ(d->devid, DEVID_PDC20265) ||
 		    IDE_PCI_DEVID_EQ(d->devid, DEVID_PDC20267) ||
 		    IDE_PCI_DEVID_EQ(d->devid, DEVID_PDC20268) ||

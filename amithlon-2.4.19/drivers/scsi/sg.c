@@ -835,7 +835,7 @@ static int sg_ioctl(struct inode * inode, struct file * filp,
                        &sg_idp->h_cmd_per_lun);
 	    __put_user((short)sdp->device->queue_depth,
                        &sg_idp->d_queue_depth);
-	    __put_user(0, &sg_idp->unused[0]);
+	    __put_user(sdp->device->removable?1:0, &sg_idp->unused[0]);
 	    __put_user(0, &sg_idp->unused[1]);
             return 0;
         }
@@ -1334,7 +1334,10 @@ static int sg_init()
     static int sg_registered = 0;
     unsigned long iflags;
 
-    if ((sg_template.dev_noticed == 0) || sg_dev_arr)
+    /* Make sure we get a /proc/scsi/sg/hosts_strs entry even if 
+       there are no scsi devices! Amithlon 1.0.1 will crash otherwise.
+       Thou shalt check thy return code of fopen! */
+    if (/* (sg_template.dev_noticed == 0) || */ sg_dev_arr)
     	return 0;
 
     write_lock_irqsave(&sg_dev_arr_lock, iflags);

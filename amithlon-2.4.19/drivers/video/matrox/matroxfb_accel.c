@@ -143,6 +143,7 @@ void matrox_cfbX_init(WPMINFO struct display* p) {
 	ACCESS_FBINFO(accel.m_opmode) = mopmode;
 }
 
+
 static void matrox_cfbX_bmove(struct display* p, int sy, int sx, int dy, int dx, int height, int width) {
 	int pixx = p->var.xres_virtual, start, end;
 	CRITFLAGS
@@ -184,6 +185,156 @@ static void matrox_cfbX_bmove(struct display* p, int sy, int sx, int dy, int dx,
 	WaitTillIdle();
 
 	CRITEND
+}
+
+
+int matrox_blittemplate(struct matrox_fb_info* minfo,
+			 u_int32_t fgx, u_int32_t bgx, 
+			 int sy, int sx, 
+			 int height, int width, 
+			 int offset, char* data, int pitch,
+			 unsigned char rop3)	
+{
+	u_int32_t ar0;
+	int i;
+
+	return -EINVAL;
+
+	CRITFLAGS
+
+	DBG_HEAVY("matrox_cfbX_putc");
+
+	CRITBEGIN
+
+	mga_fifo(7);
+	ar0 = width - 1;
+	mga_outl(M_FXBNDRY, ((sx+ar0)<<16) | sx);
+	mga_outl(M_DWGCTL, M_DWG_ILOAD | M_DWG_SGNZERO | M_DWG_SHIFTZERO | M_DWG_BMONOWF | M_DWG_REPLACE);
+	mga_outl(M_FCOL, fgx);
+	mga_outl(M_BCOL, bgx);
+	mga_outl(M_AR5, 0);
+	mga_outl(M_AR3, 0);
+	mga_outl(M_AR0, ar0);
+	mga_ydstlen(sy, height);
+	
+	for (i = height; i > 0; i--) {
+	  mga_memcpy_toio(ACCESS_FBINFO(mmio.vbase), 0, data, (width+7)>>8);
+	  data+=pitch;
+	}
+	WaitTillIdle();
+	CRITEND
+	return 0;  
+}
+
+void matrox_rectcopy(struct matrox_fb_info* minfo, 
+		     int sy, int sx, int dy, int dx, int height, int width,
+		     int vxres) {
+	int pixx = vxres;
+	int start, end;
+	CRITFLAGS
+
+	DBG("matrox_cfbX_bmove")
+
+	CRITBEGIN
+
+	if ((dy < sy) || ((dy == sy) && (dx <= sx))) {
+		mga_fifo(2);
+		mga_outl(M_DWGCTL, M_DWG_BITBLT | M_DWG_SHIFTZERO | M_DWG_SGNZERO |
+			 M_DWG_BFCOL | M_DWG_REPLACE);
+		mga_outl(M_AR5, pixx);
+		width--;
+		start = sy*pixx+sx+curr_ydstorg(MINFO);
+		end = start+width;
+	} else {
+		mga_fifo(3);
+		mga_outl(M_DWGCTL, M_DWG_BITBLT | M_DWG_SHIFTZERO | M_DWG_BFCOL | M_DWG_REPLACE);
+		mga_outl(M_SGN, 5);
+		mga_outl(M_AR5, -pixx);
+		width--;
+		end = (sy+height-1)*pixx+sx+curr_ydstorg(MINFO);
+		start = end+width;
+		dy += height-1;
+	}
+	mga_fifo(4);
+	mga_outl(M_AR0, end);
+	mga_outl(M_AR3, start);
+	mga_outl(M_FXBNDRY, ((dx+width)<<16) | dx);
+	mga_ydstlen(dy, height);
+	WaitTillIdle();
+
+	CRITEND
+}
+
+int matrox_rectcopy_complete(struct matrox_fb_info* minfo, 
+			      int sy, int sx, int dy, int dx, 
+			      int height, int width,
+			      int spitch, int dpitch, int op,
+			      int oldpitch, int Bpp) {
+	int pixx = spitch;
+	int start, end;
+	int myop;
+	unsigned int p1,p2;
+	unsigned int org;
+
+	CRITFLAGS
+	  
+	switch (op) {
+	case 0x0c: myop=M_DWG_REPLACE; break;
+	case 0x06: myop=M_DWG_XOR; break;
+	default: return -EINVAL;
+	}
+
+	p1=sy*spitch+sx;
+	p2=dy*dpitch+dx;
+
+	org=dy*dpitch*Bpp;
+	if (ACCESS_FBINFO(capable.srcorg)) {
+	  mga_outl(M_DSTORG,org);
+	  dy=0;
+	}
+	if (dy>=4096)
+	  return -EINVAL;
+
+	DBG("matrox_cfbX_bmove")
+
+	CRITBEGIN
+
+	mga_fifo(1);
+	mga_outl(M_PITCH, dpitch);
+	WaitTillIdle();
+
+	mga_fifo(3);
+	if (p2 <= p1) {
+		mga_outl(M_DWGCTL, M_DWG_BITBLT | M_DWG_SHIFTZERO | M_DWG_SGNZERO |
+			 M_DWG_BFCOL | myop);
+		mga_outl(M_AR5, spitch);
+		width--;
+		start = sy*spitch+sx+curr_ydstorg(MINFO);
+		end = start+width;
+	} else {
+		mga_outl(M_DWGCTL, M_DWG_BITBLT | M_DWG_SHIFTZERO | M_DWG_BFCOL | myop);
+		mga_outl(M_SGN, 5);
+		mga_outl(M_AR5, -spitch);
+		width--;
+		end = (sy+height-1)*spitch+sx+curr_ydstorg(MINFO);
+		start = end+width;
+		dy += height-1;
+	}
+	mga_fifo(5);
+	mga_outl(M_AR0, end);
+	mga_outl(M_AR3, start);
+	mga_outl(M_FXBNDRY, ((dx+width)<<16) | dx);
+	mga_ydstlen(dy, height);
+	WaitTillIdle();
+
+	mga_outl(M_PITCH, oldpitch);
+	if (ACCESS_FBINFO(capable.srcorg)) {
+	  mga_outl(M_DSTORG,0);
+	}
+	WaitTillIdle();
+
+	CRITEND
+	return 0;
 }
 
 #ifdef FBCON_HAS_CFB4
@@ -242,8 +393,8 @@ static void matrox_cfb4_bmove(struct display* p, int sy, int sx, int dy, int dx,
 }
 #endif
 
-static void matroxfb_accel_clear(WPMINFO u_int32_t color, int sy, int sx, int height,
-		int width) {
+void matroxfb_accel_clear(WPMINFO u_int32_t color, int sy, int sx, int height,
+			  int width) {
 	CRITFLAGS
 
 	DBG("matroxfb_accel_clear")

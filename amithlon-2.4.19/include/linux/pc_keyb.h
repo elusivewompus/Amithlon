@@ -121,6 +121,8 @@ extern unsigned char aux_device_present;
 					   but then the read function would need
 					   a lock etc - ick */
 
+extern void (*scancode_handler)(unsigned char, int some_bool);
+
 struct aux_queue {
 	unsigned long head;
 	unsigned long tail;

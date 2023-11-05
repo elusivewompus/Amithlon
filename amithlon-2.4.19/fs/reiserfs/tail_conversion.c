@@ -2,11 +2,19 @@
  * Copyright 1999 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
 
-#include <linux/config.h>
+#ifdef __KERNEL__
+
 #include <linux/sched.h>
 #include <linux/pagemap.h>
 #include <linux/reiserfs_fs.h>
 #include <linux/locks.h>
+
+#else
+
+#include "nokernel.h"
+
+#endif
+
 
 /* access to tail : when one is going to read tail it must make sure, that is not running.
  direct2indirect and indirect2direct can not run concurrently */
@@ -21,7 +29,6 @@ int direct2indirect (struct reiserfs_transaction_handle *th, struct inode * inod
 		     loff_t tail_offset)
 {
     struct super_block * sb = inode->i_sb;
-    struct buffer_head *up_to_date_bh ;
     struct item_head * p_le_ih = PATH_PITEM_HEAD (path);
     unsigned long total_tail = 0 ;
     struct cpu_key end_key;  /* Key to search for the last byte of the
@@ -44,6 +51,12 @@ int direct2indirect (struct reiserfs_transaction_handle *th, struct inode * inod
     copy_item_head (&ind_ih, p_le_ih);
     set_le_ih_k_offset (&ind_ih, tail_offset);
     set_le_ih_k_type (&ind_ih, TYPE_INDIRECT);
+
+    if (is_tail_convert_locked (inode))
+	BUG ();
+    wait_on_tail (inode);
+    lock_tail (inode, CONVERT_TAIL_LOCK);
+
 
     /* Set the key to search for the place for new unfm pointer */
     make_cpu_key (&end_key, inode, tail_offset, TYPE_INDIRECT, 4);
@@ -75,6 +88,7 @@ int direct2indirect (struct reiserfs_transaction_handle *th, struct inode * inod
 					    (char *)&unfm_ptr, UNFM_P_SIZE);
     }
     if ( n_retval ) {
+	unlock_tail (inode);
 	return n_retval;
     }
 
@@ -102,34 +116,16 @@ int direct2indirect (struct reiserfs_transaction_handle *th, struct inode * inod
         tail_size = (le_ih_k_offset (p_le_ih) & (n_blk_size - 1))
             + ih_item_len(p_le_ih) - 1;
 
-	/* we only send the unbh pointer if the buffer is not up to date.
-	** this avoids overwriting good data from writepage() with old data
-	** from the disk or buffer cache
-	*/
-	if (buffer_uptodate(unbh) || Page_Uptodate(unbh->b_page)) {
-	    up_to_date_bh = NULL ;
-	} else {
-	    up_to_date_bh = unbh ;
-	}
-	n_retval = reiserfs_delete_item (th, path, &end_key, inode, 
-	                                 up_to_date_bh) ;
-
-	total_tail += n_retval ;
-	if (tail_size == n_retval)
+	n_retval = reiserfs_delete_item (th, path, &end_key, inode, unbh);
+	if (first_direct && item_len == n_retval)
 	    // done: file does not have direct items anymore
 	    break;
 
     }
-    /* if we've copied bytes from disk into the page, we need to zero
-    ** out the unused part of the block (it was not up to date before)
-    ** the page is still kmapped (by whoever called reiserfs_get_block)
-    */
-    if (up_to_date_bh) {
-        unsigned pgoff = (tail_offset + total_tail - 1) & (PAGE_CACHE_SIZE - 1);
-	memset(page_address(unbh->b_page) + pgoff, 0, n_blk_size - total_tail) ;
-    }
 
     inode->u.reiserfs_i.i_first_direct_byte = U32_MAX;
+
+    unlock_tail (inode);
 
     return 0;
 }
@@ -142,45 +138,46 @@ void reiserfs_unmap_buffer(struct buffer_head *bh) {
       BUG() ;
     }
     mark_buffer_clean(bh) ;
-    lock_buffer(bh) ;
+    wait_on_buffer(bh) ;
+    clear_bit(BH_Uptodate, &bh->b_state) ;
     clear_bit(BH_Mapped, &bh->b_state) ;
     clear_bit(BH_Req, &bh->b_state) ;
     clear_bit(BH_New, &bh->b_state) ;
-    unlock_buffer(bh) ;
   }
 }
 
 static void
-unmap_buffers(struct page *page, loff_t pos) {
+unmap_buffers(struct inode *p_s_inode, loff_t pos) {
+  loff_t cur_pos = pos ;
+  struct page *page ;
+  unsigned long index; 
   struct buffer_head *bh ;
   struct buffer_head *head ;
   struct buffer_head *next ;
-  unsigned long tail_index ;
-  unsigned long cur_index ;
 
-  if (page) {
-    if (page->buffers) {
-      tail_index = pos & (PAGE_CACHE_SIZE - 1) ;
-      cur_index = 0 ;
-      head = page->buffers ;
-      bh = head ;
-      do {
-	next = bh->b_this_page ;
 
-        /* we want to unmap the buffers that contain the tail, and
-        ** all the buffers after it (since the tail must be at the
-        ** end of the file).  We don't want to unmap file data 
-        ** before the tail, since it might be dirty and waiting to 
-        ** reach disk
-        */
-        cur_index += bh->b_size ;
-        if (cur_index > tail_index) {
-          reiserfs_unmap_buffer(bh) ;
-        }
-	bh = next ;
-      } while (bh != head) ;
-    }
-  } 
+  /* starting with brute force method, get all the buffers in 
+  ** the page.  Since blocksize == 4k == pagesize, this is not
+  ** a performance hit on intel.
+  */
+  while (cur_pos <= p_s_inode->i_size) {
+    index = cur_pos >> PAGE_CACHE_SHIFT ;
+    page = grab_cache_page(p_s_inode->i_mapping, index) ;
+    if (page) {
+      if (page->buffers) {
+	head = page->buffers ;
+	bh = head ;
+        do {
+	  next = bh->b_this_page ;
+	  reiserfs_unmap_buffer(bh) ;
+	  bh = next ;
+	} while (bh != head) ;
+      }
+      UnlockPage(page) ;
+      page_cache_release(page) ;
+    } 
+    cur_pos += PAGE_CACHE_SIZE ;
+  }
 }
 
 /* this first locks inode (neither reads nor sync are permitted),
@@ -191,7 +188,6 @@ unmap_buffers(struct page *page, loff_t pos) {
    inode */
 int indirect2direct (struct reiserfs_transaction_handle *th, 
 		     struct inode * p_s_inode,
-		     struct page *page, 
 		     struct path * p_s_path, /* path to the indirect item. */
 		     const struct cpu_key * p_s_item_key, /* Key to look for unformatted node pointer to be cut. */
 		     loff_t n_new_file_size, /* New file size. */
@@ -203,6 +199,7 @@ int indirect2direct (struct reiserfs_transaction_handle *th,
     char * tail;
     int tail_len, round_tail_len;
     loff_t pos, pos1; /* position of first byte of the tail */
+    struct page * page;
     struct cpu_key key;
 
     p_s_sb->u.reiserfs_sb.s_indirect2direct ++;
@@ -221,11 +218,32 @@ int indirect2direct (struct reiserfs_transaction_handle *th,
     pos = le_ih_k_offset (&s_ih) - 1 + (ih_item_len(&s_ih) / UNFM_P_SIZE - 1) * p_s_sb->s_blocksize;
     pos1 = pos;
 
+
     // we are protected by i_sem. The tail can not disapper, not
     // append can be done either
-    // we are in truncate or packing tail in file_release
+    page = grab_cache_page (p_s_inode->i_mapping, pos >> PAGE_CACHE_SHIFT);
+    if (page == 0) {
+	pathrelse (p_s_path);
+	return n_block_size - round_tail_len;
+    }
 
-    tail = (char *)kmap(page) ; /* this can schedule */
+    if (!Page_Uptodate(page)) {
+	block_read_full_page (page, reiserfs_get_block);
+	wait_on_page (page);
+	if (!Page_Uptodate(page)) {
+	    UnlockPage (page);
+	    page_cache_release (page);
+	    pathrelse (p_s_path);
+	    return n_block_size - round_tail_len;
+	}
+    }
+
+    // we are in truncate or packing tail in file_release
+    if (is_tail_convert_locked (p_s_inode))
+	BUG ();
+    wait_on_tail (p_s_inode);
+    lock_tail (p_s_inode, CONVERT_TAIL_LOCK);
+
 
     if (path_changed (&s_ih, p_s_path)) {
 	/* re-search indirect item */
@@ -246,12 +264,7 @@ int indirect2direct (struct reiserfs_transaction_handle *th,
     /* Set direct item header to insert. */
     make_le_item_head (&s_ih, 0, get_inode_item_key_version (p_s_inode), pos1 + 1,
 		       TYPE_DIRECT, round_tail_len, 0xffff/*ih_free_space*/);
-
-    /* we want a pointer to the first byte of the tail in the page.
-    ** the page was locked and this part of the page was up to date when
-    ** indirect2direct was called, so we know the bytes are still valid
-    */
-    tail = tail + (pos & (PAGE_CACHE_SIZE - 1)) ;
+    tail = (char *)page_address (page) + (pos & (PAGE_CACHE_SIZE - 1));
 
     PATH_LAST_POSITION(p_s_path)++;
 
@@ -267,15 +280,19 @@ int indirect2direct (struct reiserfs_transaction_handle *th,
 	   used, it would be ideal to write zeros to corresponding
 	   unformatted node. For now i_size is considered as guard for
 	   going out of file size */
-	kunmap(page) ;
+	UnlockPage (page);
+	page_cache_release (page);
+	unlock_tail (p_s_inode);
 	return n_block_size - round_tail_len;
     }
-    kunmap(page) ;
+    UnlockPage (page);
+    page_cache_release (page);
 
+    /* vmtruncate (p_s_inode, pos1); */
     /* this will invalidate all the buffers in the page after
     ** pos1
     */
-    unmap_buffers(page, pos1) ;
+    unmap_buffers(p_s_inode, pos1) ;
 
     // note: we have now the same as in above direct2indirect
     // conversion: there are two keys which have matching first three

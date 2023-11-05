@@ -1070,10 +1070,12 @@ cyber2000fb_pan_display(struct fb_var_screeninfo *var, int con,
 	if (!(var->vmode & FB_VMODE_YWRAP))
 		y_bottom += var->yres;
 
+#if 0
 	if (var->xoffset > (var->xres_virtual - var->xres))
 		return -EINVAL;
 	if (y_bottom > cfb->fb.var.yres_virtual)
 		return -EINVAL;
+#endif
 
 	if (cyber2000fb_update_start(cfb, var))
 		return -EINVAL;

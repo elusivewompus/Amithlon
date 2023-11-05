@@ -3,10 +3,8 @@
 
 #ifndef _LINUX_REISER_FS_SB
 #define _LINUX_REISER_FS_SB
-
-#ifdef __KERNEL__
+                                
 #include <linux/tqueue.h>
-#endif
 
 //
 // super block's field values
@@ -19,7 +17,7 @@
 #define TEA_HASH  1
 #define YURA_HASH 2
 #define R5_HASH   3
-#define DEFAULT_HASH R5_HASH
+#define DEFAULT_HASH TEA_HASH
 
 /* this is the on disk super block */
 
@@ -38,8 +36,6 @@ struct reiserfs_super_block
   ** while mounting (inside journal_init) prevent that from happening
   */
 
-				/* great comment Chris. Thanks.  -Hans */
-
   __u32 s_orig_journal_size; 		
   __u32 s_journal_trans_max ;           /* max number of blocks in a transaction.  */
   __u32 s_journal_block_count ;         /* total size of the journal. can change over time  */
@@ -51,7 +47,7 @@ struct reiserfs_super_block
   __u16 s_oid_cursize;			/* current size of object id array */
   __u16 s_state;                       	/* valid or error       */
   char s_magic[12];                     /* reiserfs magic string indicates that file system is reiserfs */
-  __u32 s_hash_function_code;		/* indicate, what hash function is being use to sort names in a directory*/
+  __u32 s_hash_function_code;		/* indicate, what hash fuction is being use to sort names in a directory*/
   __u16 s_tree_height;                  /* height of disk tree */
   __u16 s_bmap_nr;                      /* amount of bitmap blocks needed to address each block of file system */
   __u16 s_version;		/* I'd prefer it if this was a string,
@@ -59,20 +55,8 @@ struct reiserfs_super_block
                                    16 bytes long mostly unused. We
                                    don't need to save bytes in the
                                    superblock. -Hans */
-  __u16 s_reserved;
-  __u32 s_inode_generation;
-  __u32 s_flags;		       /* Right now used only by inode-attributes, if enabled */
-  unsigned char s_uuid[16];            /* filesystem unique identifier */
-  unsigned char s_label[16];           /* filesystem volume label */
-  char s_unused[88] ;                  /* zero filled by mkreiserfs and
-                                        * reiserfs_convert_objectid_map_v1()
-                                        * so any additions must be updated
-                                        * there as well. */
-} __attribute__ ((__packed__));
-
-typedef enum {
-  reiserfs_attrs_cleared       = 0x00000001,
-} reiserfs_super_block_flags;
+  char s_unused[128] ;			/* zero filled by mkreiserfs */
+};
 
 #define SB_SIZE (sizeof(struct reiserfs_super_block))
 /* struct reiserfs_super_block accessors/mutators
@@ -148,8 +132,8 @@ struct reiserfs_super_block_v1
   char s_magic[16];                     /* reiserfs magic string indicates that file system is reiserfs */
   __u16 s_tree_height;                  /* height of disk tree */
   __u16 s_bmap_nr;                      /* amount of bitmap blocks needed to address each block of file system */
-  __u32 s_reserved;
-} __attribute__ ((__packed__));
+  __u16 s_reserved;
+};
 
 #define SB_SIZE_V1 (sizeof(struct reiserfs_super_block_v1))
 
@@ -182,7 +166,7 @@ struct reiserfs_super_block_v1
 #define JOURNAL_MAX_CNODE   1500 /* max cnodes to allocate. */
 #define JOURNAL_TRANS_MAX 1024   /* biggest possible single transaction, don't change for now (8/3/99) */
 #define JOURNAL_HASH_SIZE 8192   
-#define JOURNAL_NUM_BITMAPS 5 /* number of copies of the bitmaps to have floating.  Must be >= 2 */
+#define JOURNAL_NUM_BITMAPS 3 /* number of copies of the bitmaps to have floating.  Must be >= 2 */
 #define JOURNAL_LIST_COUNT 64
 
 /* these are bh_state bit flag offset numbers, for use in the buffer head */
@@ -204,7 +188,7 @@ struct reiserfs_super_block_v1
 ** hash of all the in memory transactions.
 ** next and prev are used by the current transaction (journal_hash).
 ** hnext and hprev are used by journal_list_hash.  If a block is in more than one transaction, the journal_list_hash
-** links it in multiple times.  This allows flush_journal_list to remove just the cnode belonging
+** links it in multiple times.  This allows the end_io handler, and flush_journal_list to remove just the cnode belonging
 ** to a given transaction.
 */
 struct reiserfs_journal_cnode {
@@ -219,15 +203,14 @@ struct reiserfs_journal_cnode {
   struct reiserfs_journal_cnode *hnext ; /* next in hash list */
 };
 
-struct reiserfs_bitmap_node {
-  int id ;
-  char *data ;
-  struct list_head list ;
-} ;
+				/* oooh boy does this need
+                                   commenting. I want a full length
+                                   paragraph on our multiple bitmap
+                                   architecture. -Hans */
 
 struct reiserfs_list_bitmap {
-  struct reiserfs_journal_list *journal_list ;
-  struct reiserfs_bitmap_node **bitmaps ;
+  struct reiserfs_journal_list *journal_list;  /* used to flush the commit when this one needs to be reused */
+  char *bitmap ;   /* the bitmap */
 } ;
 
 /*
@@ -236,20 +219,34 @@ struct reiserfs_list_bitmap {
 struct reiserfs_transaction_handle {
 				/* ifdef it. -Hans */
   char *t_caller ;              /* debugging use */
-  int t_blocks_logged ;         /* number of blocks this writer has logged */
+  int t_blocks_logged ;         /* number of blocks this writer has actually logged */
+				/* is the allocation of blocks to writers explained somewhere? -Hans */
   int t_blocks_allocated ;      /* number of blocks this writer allocated */
-  unsigned long t_trans_id ;    /* sanity check, equals the current trans id */
-  struct super_block *t_super ; /* super for this FS when journal_begin was 
-                                   called. saves calls to reiserfs_get_super */
+  unsigned long t_trans_id ;    /* sanity check, should equal the current trans id */
+  struct super_block *t_super ; /* super for this FS when journal_begin was called. saves calls to reiserfs_get_super */
+
 } ;
 
 /*
+
+so why is it called a journal list if there is one per transaction,
+and not a transaction list.  Hmmm.  Maybe if transaction and journal
+as used by your code were conceptually defined somewhere I'd know the
+answer. -Hans
+
 ** one of these for each transaction.  The most important part here is the j_realblock.
 ** this list of cnodes is used to hash all the blocks in all the commits, to mark all the
 ** real buffer heads dirty once all the commits hit the disk,
 ** and to make sure every real block in a transaction is on disk before allowing the log area
 ** to be overwritten */
 struct reiserfs_journal_list {
+				/* per field comments? You could at
+                                   least indicate that these things
+                                   are blocknumbers.  Hmmm.  We need a
+                                   blocknr typedef so that we can go
+                                   to 40+ bit blocknumbers without an
+                                   excess of pain. The next new
+                                   programmer we hire.  -Hans */
   unsigned long j_start ;
   unsigned long j_len ;
   atomic_t j_nonzerolen ;
@@ -273,8 +270,8 @@ struct reiserfs_journal {
   struct buffer_head ** j_ap_blocks ; /* journal blocks on disk */
   struct reiserfs_journal_cnode *j_last ; /* newest journal block */
   struct reiserfs_journal_cnode *j_first ; /*  oldest journal block.  start here for traverse */
-				
-  long j_state ;			
+				/* comment? -Hans */
+  int j_state ;			
   unsigned long j_trans_id ;
   unsigned long j_mount_id ;
   unsigned long j_start ;             /* start of current waiting commit (index into j_ap_blocks) */
@@ -307,10 +304,6 @@ struct reiserfs_journal {
   struct reiserfs_journal_cnode *j_cnode_free_list ;
   struct reiserfs_journal_cnode *j_cnode_free_orig ; /* orig pointer returned from vmalloc */
 
-  int j_free_bitmap_nodes ;
-  int j_used_bitmap_nodes ;
-  struct list_head j_bitmap_nodes ;
-  struct inode j_dummy_inode ;
   struct reiserfs_list_bitmap j_list_bitmap[JOURNAL_NUM_BITMAPS] ;	/* array of bitmaps to record the deleted blocks */
   struct reiserfs_journal_list j_journal_list[JOURNAL_LIST_COUNT] ;	    /* array of all the journal lists */
   struct reiserfs_journal_cnode *j_hash_table[JOURNAL_HASH_SIZE] ; 	    /* hash table for real buffer heads in current trans */ 
@@ -402,8 +395,6 @@ typedef struct reiserfs_proc_info_data
 struct reiserfs_sb_info
 {
     struct buffer_head * s_sbh;                   /* Buffer containing the super block */
-				/* both the comment and the choice of
-                                   name are unclear for s_rs -Hans */
     struct reiserfs_super_block * s_rs;           /* Pointer to the super block in the buffer */
     struct buffer_head ** s_ap_bitmap;       /* array of buffers, holding block bitmap */
     struct reiserfs_journal *s_journal ;		/* pointer to journal information */
@@ -473,38 +464,17 @@ struct reiserfs_sb_info
 #define FORCE_R5_HASH 8       /* try to force rupasov hash on mount */
 #define FORCE_HASH_DETECT 9   /* try to detect hash function on mount */
 
-
-/* used for testing experimental features, makes benchmarking new
-   features with and without more convenient, should never be used by
-   users in any code shipped to users (ideally) */
-
-#define REISERFS_NO_BORDER 11
-#define REISERFS_NO_UNHASHED_RELOCATION 12
-#define REISERFS_HASHED_RELOCATION 13
-#define REISERFS_TEST4 14 
-
-#define REISERFS_TEST1 11
-#define REISERFS_TEST2 12
-#define REISERFS_TEST3 13
-#define REISERFS_TEST4 14 
-
 #define REISERFS_ATTRS (15)
 
 #define reiserfs_r5_hash(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << FORCE_R5_HASH))
 #define reiserfs_rupasov_hash(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << FORCE_RUPASOV_HASH))
 #define reiserfs_tea_hash(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << FORCE_TEA_HASH))
 #define reiserfs_hash_detect(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << FORCE_HASH_DETECT))
-#define reiserfs_no_border(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_NO_BORDER))
-#define reiserfs_no_unhashed_relocation(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_NO_UNHASHED_RELOCATION))
-#define reiserfs_hashed_relocation(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_HASHED_RELOCATION))
-#define reiserfs_test4(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_TEST4))
 
 #define dont_have_tails(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << NOTAIL))
 #define replay_only(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REPLAYONLY))
 #define reiserfs_dont_log(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_NOLOG))
-#define reiserfs_attrs(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_ATTRS))
-#define old_format_only(s) ((s)->u.reiserfs_sb.s_properties & (1 << REISERFS_3_5))
-#define convert_reiserfs(s) ((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_CONVERT))
+#define old_format_only(s) ((le16_to_cpu(SB_VERSION(s)) != REISERFS_VERSION_2) && !((s)->u.reiserfs_sb.s_mount_opt & (1 << REISERFS_CONVERT)))
 
 
 void reiserfs_file_buffer (struct buffer_head * bh, int list);
@@ -512,6 +482,8 @@ int reiserfs_is_super(struct super_block *s)  ;
 int journal_mark_dirty(struct reiserfs_transaction_handle *, struct super_block *, struct buffer_head *bh) ;
 int flush_old_commits(struct super_block *s, int) ;
 int show_reiserfs_locks(void) ;
+void reiserfs_end_buffer_io_sync (struct buffer_head *bh, int uptodate) ; 
+void reiserfs_journal_end_io(struct buffer_head *bh, int uptodate) ;
 int reiserfs_resize(struct super_block *, unsigned long) ;
 
 #define CARRY_ON                0
@@ -527,22 +499,15 @@ int reiserfs_resize(struct super_block *, unsigned long) ;
 
 
 // on-disk super block fields converted to cpu form
-#define SB_DISK_SUPER_BLOCK(s)        ((s)->u.reiserfs_sb.s_rs)
-#define SB_BLOCK_COUNT(s)             sb_block_count (SB_DISK_SUPER_BLOCK(s))
-#define SB_FREE_BLOCKS(s)             sb_free_blocks (SB_DISK_SUPER_BLOCK(s))
-#define SB_REISERFS_MAGIC(s)          (SB_DISK_SUPER_BLOCK(s)->s_magic)
-#define SB_ROOT_BLOCK(s)              sb_root_block (SB_DISK_SUPER_BLOCK(s))
-#define SB_TREE_HEIGHT(s)             sb_tree_height (SB_DISK_SUPER_BLOCK(s))
-#define SB_REISERFS_STATE(s)          sb_state (SB_DISK_SUPER_BLOCK(s))
-#define SB_VERSION(s)                 sb_version (SB_DISK_SUPER_BLOCK(s))
-#define SB_BMAP_NR(s)                 sb_bmap_nr(SB_DISK_SUPER_BLOCK(s))
-
-#define PUT_SB_BLOCK_COUNT(s, val)    do { set_sb_block_count( SB_DISK_SUPER_BLOCK(s), val); } while (0)
-#define PUT_SB_FREE_BLOCKS(s, val)    do { set_sb_free_blocks( SB_DISK_SUPER_BLOCK(s), val); } while (0)
-#define PUT_SB_ROOT_BLOCK(s, val)     do { set_sb_root_block( SB_DISK_SUPER_BLOCK(s), val); } while (0)
-#define PUT_SB_TREE_HEIGHT(s, val)    do { set_sb_tree_height( SB_DISK_SUPER_BLOCK(s), val); } while (0)
-#define PUT_SB_REISERFS_STATE(s, val) do { set_sb_state( SB_DISK_SUPER_BLOCK(s), val); } while (0) 
-#define PUT_SB_VERSION(s, val)        do { set_sb_version( SB_DISK_SUPER_BLOCK(s), val); } while (0)
-#define PUT_SB_BMAP_NR(s, val)        do { set_sb_bmap_nr( SB_DISK_SUPER_BLOCK(s), val); } while (0)
+#define SB_DISK_SUPER_BLOCK(s) ((s)->u.reiserfs_sb.s_rs)
+#define SB_JOURNAL_BLOCK(s) le32_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_journal_block))
+#define SB_BLOCK_COUNT(s) le32_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_block_count))
+#define SB_FREE_BLOCKS(s) le32_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_free_blocks))
+#define SB_REISERFS_MAGIC(s) (SB_DISK_SUPER_BLOCK(s)->s_magic)
+#define SB_ROOT_BLOCK(s) le32_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_root_block))
+#define SB_TREE_HEIGHT(s) le16_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_tree_height))
+#define SB_REISERFS_STATE(s) le16_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_state))
+#define SB_VERSION(s) le16_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_version))
+#define SB_BMAP_NR(s) le16_to_cpu ((SB_DISK_SUPER_BLOCK(s)->s_bmap_nr))
 
 #endif	/* _LINUX_REISER_FS_SB */

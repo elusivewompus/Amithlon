@@ -24,7 +24,7 @@ comment 'User Modules And Translation Layers'
    dep_tristate '  Caching block device access to MTD devices' CONFIG_MTD_BLOCK $CONFIG_MTD
    if [ "$CONFIG_MTD_BLOCK" = "n" -o "$CONFIG_MTD_BLOCK" = "m" ]; then
    	dep_tristate '  Readonly block device access to MTD devices' CONFIG_MTD_BLOCK_RO $CONFIG_MTD
-   fi
+
    dep_tristate '  FTL (Flash Translation Layer) support' CONFIG_FTL $CONFIG_MTD
    dep_tristate '  NFTL (NAND Flash Translation Layer) support' CONFIG_NFTL $CONFIG_MTD
    if [ "$CONFIG_NFTL" = "y" -o "$CONFIG_NFTL" = "m" ]; then

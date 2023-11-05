@@ -1,5 +1,5 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
 
 /* Now we have all buffers that must be used in balancing of the tree 	*/
@@ -16,10 +16,18 @@
  **
  **/
 
-#include <linux/config.h>
+#ifdef __KERNEL__
+
 #include <asm/uaccess.h>
 #include <linux/sched.h>
 #include <linux/reiserfs_fs.h>
+
+#else
+
+#include "nokernel.h"
+
+#endif
+
 
 #ifdef CONFIG_REISERFS_CHECK
 
@@ -35,7 +43,7 @@ inline void do_balance_mark_leaf_dirty (struct tree_balance * tb,
 {
     if (reiserfs_dont_log(tb->tb_sb)) {
 	if (!test_and_set_bit(BH_Dirty, &bh->b_state)) {
-	    __mark_buffer_dirty(bh) ;
+	    __mark_buffer_dirty(bh, flag);
 	    tb->need_balance_dirty = 1;
 	}
     } else {

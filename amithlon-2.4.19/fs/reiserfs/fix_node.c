@@ -1,5 +1,5 @@
 /*
- * Copyright 2000 by Hans Reiser, licensing governed by reiserfs/README
+ * Copyright 1996, 1997, 1998 Hans Reiser, see reiserfs/README for licensing and copyright details
  */
 
 /**
@@ -35,11 +35,19 @@
  **/
 
 
-#include <linux/config.h>
+#ifdef __KERNEL__
+
 #include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/locks.h>
 #include <linux/reiserfs_fs.h>
+
+#else
+
+#include "nokernel.h"
+
+#endif
+
 
 
 /* To make any changes in the tree we find a node, that contains item
@@ -373,12 +381,9 @@ static int get_num_ver (int mode, struct tree_balance * tb, int h,
 		       we do not include into node that is being filled */
 	end_bytes;	/* number of last bytes (entries for directory) of end_item-th item 
 			   we do node include into node that is being filled */
-    int split_item_positions[2]; /* these are positions in virtual item of
-				    items, that are split between S[0] and
-				    S1new and S1new and S2new */
+    //    int splitted_item_positions[2];	/* these are positions in virtual item of items, 
+    //					   that are splitted between S[0] and S1new and S1new and S2new */
 
-    split_item_positions[0] = -1;
-    split_item_positions[1] = -1;
 
     /* We only create additional nodes if we are in insert or paste mode
        or we are in replace mode at the internal level. If h is 0 and
@@ -414,18 +419,26 @@ static int get_num_ver (int mode, struct tree_balance * tb, int h,
 
     // last included item is the 'end_item'-th one
     end_item = vn->vn_nr_item - to - 1;
-    // do not count last 'end_bytes' units of 'end_item'-th item
+    // without last 'end_bytes' units
     end_bytes = (to_bytes != -1) ? to_bytes : 0;
 
-    /* go through all item beginning from the start_item-th item and ending by
-       the end_item-th item. Do not count first 'start_bytes' units of
-       'start_item'-th item and last 'end_bytes' of 'end_item'-th item */
+    /* go through all item begining from the start_item-th item and
+       ending by the end_item-th item. If start_bytes != -1 we take
+       only tailing part of start_bytes-th item. If end_bytes != -1 we
+       take only head of the end_item-th item. */
     
     for (i = start_item; i <= end_item; i ++) {
 	struct virtual_item * vi = vn->vn_vi + i;
 	int skip_from_end = ((i == end_item) ? end_bytes : 0);
 
-	RFALSE( needed_nodes > 3, "vs-8105: too many nodes are needed");
+#ifdef CONFIG_REISERFS_CHECK
+	if (needed_nodes > 3) {
+	    print_virtual_node (vn);
+	    reiserfs_panic (0, "vs-8105: get_num_ver: too many nodes %d are needed, "
+			    "start_item %d, end_item %d, start_bytes %d, end_bytes %d, i == %d",
+			    needed_nodes, start_item, end_item, start_bytes, end_bytes, i);
+	}
+#endif
 
 	/* get size of current item */
 	current_item_size = vi->vi_item_len;
@@ -476,16 +489,12 @@ static int get_num_ver (int mode, struct tree_balance * tb, int h,
 	}
 
 	/* something fits into the current node */
-	//if (snum012[3] != -1 || needed_nodes != 1)
-	//  reiserfs_panic (tb->tb_sb, "vs-8115: get_num_ver: too many nodes required");
-	//snum012[needed_nodes - 1 + 3] = op_unit_num (vi) - start_bytes - units;
+	if (snum012[3] != -1 || needed_nodes != 1)
+	    reiserfs_panic (tb->tb_sb, "vs-8115: get_num_ver: too many nodes required");
+	snum012[3] = op_unit_num (vi) - start_bytes - skip_from_end - units;
 	start_bytes += units;
-	snum012[needed_nodes - 1 + 3] = units;
 
-	if (needed_nodes > 2)
-	    reiserfs_warning ("vs-8111: get_num_ver: split_item_position is out of boundary\n");
 	snum012[needed_nodes - 1] ++;
-	split_item_positions[needed_nodes - 1] = i;
 	needed_nodes ++;
 	/* continue from the same item with start_bytes != -1 */
 	start_item = i;
@@ -493,41 +502,6 @@ static int get_num_ver (int mode, struct tree_balance * tb, int h,
 	total_node_size = 0;
     }
 
-    // sum012[4] (if it is not -1) contains number of units of which
-    // are to be in S1new, snum012[3] - to be in S0. They are supposed
-    // to be S1bytes and S2bytes correspondingly, so recalculate
-    if (snum012[4] > 0) {
-	int split_item_num;
-	int bytes_to_r, bytes_to_l;
-	int bytes_to_S1new;
-    
-	split_item_num = split_item_positions[1];
-	bytes_to_l = ((from == split_item_num && from_bytes != -1) ? from_bytes : 0);
-	bytes_to_r = ((end_item == split_item_num && end_bytes != -1) ? end_bytes : 0);
-	bytes_to_S1new = ((split_item_positions[0] == split_item_positions[1]) ? snum012[3] : 0);
-
-	// s2bytes
-	snum012[4] = op_unit_num (&vn->vn_vi[split_item_num]) - snum012[4] - bytes_to_r - bytes_to_l - bytes_to_S1new;
-
-	if (vn->vn_vi[split_item_num].vi_index != TYPE_DIRENTRY)
-	    reiserfs_warning ("vs-8115: get_num_ver: not directory item\n");
-    }
-
-    /* now we know S2bytes, calculate S1bytes */
-    if (snum012[3] > 0) {
-	int split_item_num;
-	int bytes_to_r, bytes_to_l;
-	int bytes_to_S2new;
-    
-	split_item_num = split_item_positions[0];
-	bytes_to_l = ((from == split_item_num && from_bytes != -1) ? from_bytes : 0);
-	bytes_to_r = ((end_item == split_item_num && end_bytes != -1) ? end_bytes : 0);
-	bytes_to_S2new = ((split_item_positions[0] == split_item_positions[1] && snum012[4] != -1) ? snum012[4] : 0);
-
-	// s1bytes
-	snum012[3] = op_unit_num (&vn->vn_vi[split_item_num]) - snum012[3] - bytes_to_r - bytes_to_l - bytes_to_S2new;
-    }
-    
     return needed_nodes;
 }
 
@@ -2033,7 +2007,7 @@ static int get_virtual_node_size (struct super_block * sb, struct buffer_head * 
 /* maybe we should fail balancing we are going to perform when kmalloc
    fails several times. But now it will loop until kmalloc gets
    required memory */
-static int get_mem_for_virtual_node (struct tree_balance * tb)
+int get_mem_for_virtual_node (struct tree_balance * tb)
 {
     int check_fs = 0;
     int size;
@@ -2301,18 +2275,6 @@ int fix_nodes (int n_op_mode,
 
     p_s_tb->fs_gen = get_generation (p_s_tb->tb_sb);
 
-    /* we prepare and log the super here so it will already be in the
-    ** transaction when do_balance needs to change it.
-    ** This way do_balance won't have to schedule when trying to prepare
-    ** the super for logging
-    */
-    reiserfs_prepare_for_journal(p_s_tb->tb_sb, 
-                                 SB_BUFFER_WITH_SB(p_s_tb->tb_sb), 1) ;
-    journal_mark_dirty(p_s_tb->transaction_handle, p_s_tb->tb_sb, 
-                       SB_BUFFER_WITH_SB(p_s_tb->tb_sb)) ;
-    if ( FILESYSTEM_CHANGED_TB (p_s_tb) )
-	return REPEAT_SEARCH;
-
     /* if it possible in indirect_to_direct conversion */
     if (buffer_locked (p_s_tbS0)) {
         __wait_on_buffer (p_s_tbS0);
@@ -2469,6 +2431,7 @@ int fix_nodes (int n_op_mode,
 	    brelse (p_s_tb->CFR[i]);p_s_tb->CFR[i] = 0;
 	}
 
+#if 0 // keep new allocated nodes
 	if (wait_tb_buffers_run) {
 	    for ( i = 0; i < MAX_FEB_SIZE; i++ ) { 
 		if ( p_s_tb->FEB[i] ) {
@@ -2477,6 +2440,7 @@ int fix_nodes (int n_op_mode,
 		}
 	    }
 	}
+#endif
 	return n_ret_value;
     }
 

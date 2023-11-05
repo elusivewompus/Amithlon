@@ -18,6 +18,9 @@
 #include <video/fbcon.h>
 #include <video/fbcon-cfb32.h>
 
+#include "amithlon.h"
+#include <asm/uaccess.h>
+
 
     /*
      *  32 bpp packed pixels
@@ -108,6 +111,32 @@ void fbcon_cfb32_clear(struct vc_data *conp, struct display *p, int sy, int sx,
 	rectfill(dest, lines * width * 4, 1, bgx, bytes);
     else
 	rectfill(dest, width * 4, lines, bgx, bytes);
+}
+
+void fbcon_cfb32_clear_amy(struct vc_data *conp, struct display *p, int sy, int sx,
+		       int height, int width, u32 colour)
+{
+    u8 *dest;
+    int bytes = p->next_line, lines = height;
+    u32 bgx;
+
+    p->next_line = p->line_length ? p->line_length : p->var.xres_virtual<<2;
+    bytes = p->next_line;
+
+//    bytes = p->var.xres_virtual * 4;
+    dest = p->screen_base + sy * bytes + sx * 4;
+
+    bgx = colour;
+//	printk(KERN_INFO "sy:%d  sx:%d  height:%d  width:%d\n",sy,sx,height,width);
+
+    //width *= fontwidth(p)/4;
+/*    if (width * 16 == bytes)
+	rectfill(dest, lines * width * 4, 1, bgx, bytes);
+    else
+	rectfill(dest, width * 4, lines, bgx, bytes); */
+//	printk(KERN_INFO "-----------\n");
+	printk(KERN_INFO "dest:%d  width:%d  lines:%d  bgx:%d  bytes:%d\n",dest,width,lines,bgx,bytes);
+	rectfill(dest, width, lines, bgx, bytes);
 }
 
 void fbcon_cfb32_putc(struct vc_data *conp, struct display *p, int c, int yy,

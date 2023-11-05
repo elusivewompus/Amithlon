@@ -14,6 +14,8 @@
  *
  *	Jindrich Makovicka:  Accel code help, hw cursor, mtrr
  *
+ *	Paul Richards:  Bug fixes, updates
+ *
  * Initial template from skeletonfb.c, created 28 Dec 1997 by Geert Uytterhoeven
  * Includes riva_hw.c from nVidia, see copyright below.
  * KGI code provided the basis for state storage, init, and mode switching.
@@ -22,10 +24,16 @@
  * License.  See the file COPYING in the main directory of this archive
  * for more details.
  *
- * Known bugs and issues:
- *	restoring text mode fails
- *	doublescan modes are broken
- *	option 'noaccel' has no effect
+ *
+ *
+ *	   Amithlon conversion by Gary Colville (bombcrater@garycvl.f2s.com)
+ *
+ *	   Known bugs:
+ *
+ *			- Hardware line drawing broken on NV20/25/30
+ *			- No autodetection of flat panels on DVI
+ *			- No resolution scaling
+ *
  */
 
 #include <linux/config.h>
@@ -55,7 +63,7 @@
 
 
 /* version number of this driver */
-#define RIVAFB_VERSION "0.9.3"
+#define RIVAFB_VERSION "3.0.0-amt"
 
 
 
@@ -95,7 +103,11 @@
 #define CURSOR_HIDE_DELAY		(20)
 #define CURSOR_SHOW_DELAY		(3)
 
+#ifdef __BIG_ENDIAN
+#define CURSOR_COLOR		0xff7f
+#else
 #define CURSOR_COLOR		0x7fff
+#endif
 #define TRANSPARENT_COLOR	0x0000
 #define MAX_CURS		32
 
@@ -124,23 +136,96 @@ enum riva_chips {
 	CH_RIVA_128 = 0,
 	CH_RIVA_TNT,
 	CH_RIVA_TNT2,
-	CH_RIVA_UTNT2,	/* UTNT2 */
-	CH_RIVA_VTNT2,	/* VTNT2 */
-	CH_RIVA_UVTNT2,	/* VTNT2 */
-	CH_RIVA_ITNT2,	/* ITNT2 */
+	CH_RIVA_UTNT2,
+	CH_RIVA_VTNT2,
+	CH_RIVA_UVTNT2,
+	CH_RIVA_ITNT2,
 	CH_GEFORCE_SDR,
 	CH_GEFORCE_DDR,
 	CH_QUADRO,
 	CH_GEFORCE2_MX,
+	CH_GEFORCE2_MX2,
+	CH_GEFORCE2_GO,
 	CH_QUADRO2_MXR,
 	CH_GEFORCE2_GTS,
+	CH_GEFORCE2_GTS2,
 	CH_GEFORCE2_ULTRA,
 	CH_QUADRO2_PRO,
-	CH_GEFORCE2_GO,
-        CH_GEFORCE3,
-        CH_GEFORCE3_1,
-        CH_GEFORCE3_2,
-        CH_QUADRO_DDC
+	CH_GEFORCE4_MX_460,
+	CH_GEFORCE4_MX_440,
+	CH_GEFORCE4_MX_420,
+	CH_GEFORCE4_440_GO,
+	CH_GEFORCE4_420_GO,
+	CH_GEFORCE4_420_GO_M32,
+	CH_QUADRO4_500XGL,
+	CH_GEFORCE4_440_GO_M64,
+	CH_QUADRO4_200,
+	CH_QUADRO4_550XGL,
+	CH_QUADRO4_500_GOGL,
+	CH_GEFORCE3,
+	CH_GEFORCE3_1,
+	CH_GEFORCE3_2,
+	CH_QUADRO_DDC,
+	CH_GEFORCE4_TI_4600,
+	CH_GEFORCE4_TI_4400,
+	CH_GEFORCE4_TI_4200,
+	CH_QUADRO4_900XGL,
+	CH_QUADRO4_750XGL,
+	CH_QUADRO4_700XGL, /* new stuff below */
+	CH_GEFORCE4_MX_440_SE,
+	CH_GEFORCE4_460_GO,
+	CH_GEFORCE4_410_GO_M16,
+	CH_GEFORCE4_440_8X,
+	CH_GEFORCE4_440SE_8X,
+	CH_GEFORCE4_420_8X,
+	CH_GEFORCE4_448_GO,
+	CH_GEFORCE4_488_GO,
+	CH_QUADRO4_580_XGL,
+	CH_QUADRO4_280_NVS,
+	CH_QUADRO4_380_XGL,
+	CH_IGEFORCE2,
+	CH_GEFORCE4_TI_4800,
+	CH_GEFORCE4_TI_4800_8X,
+	CH_GEFORCE4_TI_4800_SE,
+	CH_QUADRO4_980_XGL,
+	CH_QUADRO4_780_XGL,
+	CH_QUADRO4_700_GOGL,
+	CH_GEFORCE_FX_5800_ULTRA,
+	CH_GEFORCE_FX_5800,
+	CH_QUADRO_FX_2000,
+	CH_QUADRO_FX_1000,
+	CH_GEFORCE_FX_5600_ULTRA,
+	CH_GEFORCE_FX_5600,
+	CH_GEFORCE_FX_5600SE,
+	CH_GEFORCE_FX_GO5600,
+	CH_GEFORCE_FX_GO5650,
+	CH_QUADRO_FX_GO700,
+	CH_GEFORCE_FX_5200,
+	CH_GEFORCE_FX_5200_ULTRA,
+	CH_GEFORCE_FX_5200_1,
+	CH_GEFORCE_FX_5200SE,
+	CH_GEFORCE_FX_GO5200,
+	CH_GEFORCE_FX_GO5250,
+	CH_GEFORCE_FX_GO5250_32,
+	CH_GEFORCE_FX_GO_5200,
+	CH_QUADRO_NVS_280_PCI,
+	CH_QUADRO_FX_500,
+	CH_GEFORCE_FX_GO5300,
+	CH_GEFORCE_FX_GO5100,
+	CH_GEFORCE_FX_5900_ULTRA,
+	CH_GEFORCE_FX_5900,
+	CH_GEFORCE_FX_5900XT,
+	CH_GEFORCE_FX_5950_ULTRA,
+	CH_GEFORCE_FX_5700_ULTRA,
+	CH_GEFORCE_FX_5700,
+	CH_GEFORCE_FX_5700LE,
+	CH_GEFORCE_FX_5700VE,
+	CH_GEFORCE_FX_GO5700_1,
+	CH_GEFORCE_FX_GO5700_2,
+	CH_GEFORCE_FX_5500,
+	CH_GEFORCE_FX_5100,
+	CH_GEFORCE_FX_5900ZT,
+	CH_GEFORCE_MX_4000
 };
 
 /* directly indexed by riva_chips enum, above */
@@ -155,19 +240,91 @@ static struct riva_chip_info {
 	{ "RIVA-VTNT2", NV_ARCH_04 },
 	{ "RIVA-UVTNT2", NV_ARCH_04 },
 	{ "RIVA-ITNT2", NV_ARCH_04 },
-	{ "GeForce-SDR", NV_ARCH_10},
-	{ "GeForce-DDR", NV_ARCH_10},
-	{ "Quadro", NV_ARCH_10},
-	{ "GeForce2-MX", NV_ARCH_10},
-	{ "Quadro2-MXR", NV_ARCH_10},
-	{ "GeForce2-GTS", NV_ARCH_10},
-	{ "GeForce2-ULTRA", NV_ARCH_10},
-	{ "Quadro2-PRO", NV_ARCH_10},
-        { "GeForce2-Go", NV_ARCH_10},
-        { "GeForce3", NV_ARCH_20}, 
-        { "GeForce3 Ti 200", NV_ARCH_20},
-        { "GeForce3 Ti 500", NV_ARCH_20},
-        { "Quadro DDC", NV_ARCH_20}
+	{ "GeForce-SDR", NV_ARCH_10 },
+	{ "GeForce-DDR", NV_ARCH_10 },
+	{ "Quadro", NV_ARCH_10 },
+	{ "GeForce2-MX", NV_ARCH_10 },
+	{ "GeForce2-MX", NV_ARCH_10 },
+	{ "GeForce2-GO", NV_ARCH_10 },
+	{ "Quadro2-MXR", NV_ARCH_10 },
+	{ "GeForce2-GTS", NV_ARCH_10 },
+	{ "GeForce2-GTS", NV_ARCH_10 },
+	{ "GeForce2-ULTRA", NV_ARCH_10 },
+	{ "Quadro2-PRO", NV_ARCH_10 },
+	{ "GeForce4-MX-460", NV_ARCH_20 },
+	{ "GeForce4-MX-440", NV_ARCH_20 },
+	{ "GeForce4-MX-420", NV_ARCH_20 },
+	{ "GeForce4-440-GO", NV_ARCH_20 },
+	{ "GeForce4-420-GO", NV_ARCH_20 },
+	{ "GeForce4-420-GO-M32", NV_ARCH_20 },
+	{ "Quadro4-500-XGL", NV_ARCH_20 },
+	{ "GeForce4-440-GO-M64", NV_ARCH_20 },
+	{ "Quadro4-200", NV_ARCH_20 },
+	{ "Quadro4-550-XGL", NV_ARCH_20 },
+	{ "Quadro4-500-GOGL", NV_ARCH_20 },
+	{ "GeForce3", NV_ARCH_20 },
+	{ "GeForce3 Ti 200", NV_ARCH_20 },
+	{ "GeForce3 Ti 500", NV_ARCH_20 },
+	{ "Quadro DDC", NV_ARCH_20 },
+	{ "GeForce4 Ti 4600", NV_ARCH_20 },
+	{ "GeForce4 Ti 4400", NV_ARCH_20 },
+	{ "GeForce4 Ti 4200", NV_ARCH_20 },
+	{ "Quadro4-900-XGL", NV_ARCH_20 },
+	{ "Quadro4-750-XGL", NV_ARCH_20 },
+	{ "Quadro4-700-XGL", NV_ARCH_20 },
+	{ "GeForce 4 MX440SE" , NV_ARCH_20 },
+	{ "GeForce 4 460 GO" , NV_ARCH_20 },
+	{ "GeForce 4 410 GO M16" , NV_ARCH_20 },
+	{ "GeForce 4 440 AGP 8X" , NV_ARCH_20 },
+	{ "GeForce 4 440SE AGP 8X" , NV_ARCH_20 },
+	{ "GeForce 4 420 AGP 8X" , NV_ARCH_20 },
+	{ "GeForce 4 448 GO" , NV_ARCH_20 },
+	{ "GeForce 4 488 GO" , NV_ARCH_20 },
+	{ "Quadro 4 580 XGL" , NV_ARCH_20 },
+	{ "Quadro 4 280 NVS" , NV_ARCH_20 },
+	{ "Quadro 4 380 XGL" , NV_ARCH_20 },
+	{ "NForce 2 IGP" , NV_ARCH_20 },
+	{ "GeForce 4 Ti 4800" , NV_ARCH_20 },
+	{ "GeForce 4 Ti 4800 AGP 8X" , NV_ARCH_20 },
+	{ "GeForce 4 Ti 4800SE" , NV_ARCH_20 },
+	{ "Quadro 4 980 XGL" , NV_ARCH_20 },
+	{ "Quadro 4 780 XGL" , NV_ARCH_20 },
+	{ "Quadro 4 700 GOGL" , NV_ARCH_20 },
+	{ "GeForce FX 5800 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5800" , NV_ARCH_30 },
+	{ "Quadro FX 2000" , NV_ARCH_30 },
+	{ "Quadro FX 1000" , NV_ARCH_30 },
+	{ "GeForce FX 5600 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5600" , NV_ARCH_30 },
+	{ "GeForce FX 5600SE" , NV_ARCH_30 },
+	{ "GeForce FX GO5600" , NV_ARCH_30 },
+	{ "GeForce FX GO5650" , NV_ARCH_30 },
+	{ "Quadro FX GO700" , NV_ARCH_30 },
+	{ "GeForce FX 5200" , NV_ARCH_30 },
+	{ "GeForce 5200 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5200" , NV_ARCH_30 },
+	{ "GeForce FX 5200SE" , NV_ARCH_30 },
+	{ "GeForce FX GO5200" , NV_ARCH_30 },
+	{ "GeForce FX GO5250" , NV_ARCH_30 },
+	{ "GeForce FX GO5250 M32" , NV_ARCH_30 },
+	{ "GeForce FX GO5200" , NV_ARCH_30 },
+	{ "Quadro FX 500" , NV_ARCH_30 },
+	{ "GeForce FX GO5300" , NV_ARCH_30 },
+	{ "GeForce FX GO5100" , NV_ARCH_30 },
+	{ "GeForce FX 5900 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5900/5900XT" , NV_ARCH_30 },
+	{ "GeForce FX 5900XT" , NV_ARCH_30 },
+	{ "GeForce FX 5950 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5700 Ultra" , NV_ARCH_30 },
+	{ "GeForce FX 5700" , NV_ARCH_30 },
+	{ "GeForce FX 5700LE" , NV_ARCH_30 },
+	{ "GeForce FX 5700VE" , NV_ARCH_30 },
+	{ "GeForce FX GO 5700" , NV_ARCH_30 },
+	{ "GeForce FX GO 5700" , NV_ARCH_30 },
+	{ "GeForce FX 5500" , NV_ARCH_30 },
+	{ "GeForce FX 5100" , NV_ARCH_30 },
+	{ "GeForce FX 5900ZT" , NV_ARCH_30 },
+	{ "GeForce MX 4000", NV_ARCH_20 }
 };
 
 static struct pci_device_id rivafb_pci_tbl[] __devinitdata = {
@@ -194,27 +351,167 @@ static struct pci_device_id rivafb_pci_tbl[] __devinitdata = {
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_MX,
 	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_MX },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_MX2,
-	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_MX },
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_MX2 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_GO },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO2_MXR,
 	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO2_MXR },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_GTS,
 	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_GTS },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_GTS2,
-	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_GTS },
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_GTS2 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_ULTRA,
 	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_ULTRA },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO2_PRO,
 	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO2_PRO },
-        { PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE2_GO,
-          PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE2_GO },
-        { PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3,
-          PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3 },
-        { PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3_1,
-          PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3_1 },
-        { PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3_2,
-          PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3_2 },
-        { PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_DDC,
-          PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_DDC },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_460,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_MX_460 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_440,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_MX_440 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_420,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_MX_420 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_440_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_440_GO },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_420_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_420_GO },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_420_GO_M32,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_420_GO_M32 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_500XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_500XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_440_GO_M64,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_440_GO_M64 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_200,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_200 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_550XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_550XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_500_GOGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_500_GOGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3_1,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3_1 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE3_2,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE3_2 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_DDC,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_DDC },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4600,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4600 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4400,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4400 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4200,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4200 },
+ 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_900XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_900XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_750XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_750XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_700XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_700XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_440_SE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_MX_440_SE },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_460_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_460_GO },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_410_GO_M16,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_410_GO_M16 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_440_8X,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_440_8X },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_440SE_8X,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_440SE_8X },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_MX_420_8X,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_420_8X },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_448_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_448_GO },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_488_GO,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_488_GO },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_580_XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_580_XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_280_NVS,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_280_NVS },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_380_XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_380_XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_IGEFORCE2,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_IGEFORCE2 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4800,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4800 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4800_8X,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4800_8X },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE4_TI_4800SE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE4_TI_4800_SE },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_980_XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_980_XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_780_XGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_780_XGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO4_700_GOGL,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO4_700_GOGL },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5800_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5800_ULTRA },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5800,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5800 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_FX_2000,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_FX_2000 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_FX_1000,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_FX_1000 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5600_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5600_ULTRA },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5600,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5600 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5600SE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5600SE },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5600,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5600 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5650,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5650 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_FX_GO700,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_FX_GO700 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5200,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5200 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5200_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5200_ULTRA },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5200_1,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5200_1 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5200SE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5200SE }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5200,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5200 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5250,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5250 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5250_32,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5250_32 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO_5200,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO_5200 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_QUADRO_FX_500,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_QUADRO_FX_500 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5300,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5300 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5100,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5100 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5900_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5900_ULTRA }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5900,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5900 }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5900XT,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5900XT }, 
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5950_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5950_ULTRA  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5700_ULTRA,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5700_ULTRA  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5700,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5700  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5700LE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5700LE  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5700VE,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5700VE  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5700_1,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5700_1  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_GO5700_2,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_GO5700_2  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5500,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5500  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5100,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5100  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_FX_5900ZT,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_FX_5900ZT  },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_GEFORCE_MX_4000,
+	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, CH_GEFORCE_MX_4000  },
 	{ 0, } /* terminate list */
 };
 MODULE_DEVICE_TABLE(pci, rivafb_pci_tbl);
@@ -271,12 +568,14 @@ struct rivafb_info *riva_boards = NULL;
 
 /* command line data, set in rivafb_setup() */
 static char fontname[40] __initdata = { 0 };
-static char noaccel __initdata = 0;
-static char nomove = 0;
-static char nohwcursor __initdata = 0;
-static char noblink = 0;
+static int noaccel __initdata = 0;
+static int nomove = 0;
+static int nohwcursor __initdata = 0;
+static int noblink = 0;
+static int flatpanel __initdata = -1; /* Autodetect later */
+static int forceCRTC __initdata = -1;
 #ifdef CONFIG_MTRR
-static char nomtrr __initdata = 0;
+static int nomtrr __initdata = 0;
 #endif
 
 #ifndef MODULE
@@ -438,7 +737,7 @@ static void riva_cursor_timer_handler(unsigned long dev_addr)
 	if (rinfo->cursor->vbl_cnt && --rinfo->cursor->vbl_cnt == 0) {
 		rinfo->cursor->on ^= 1;
 		if (rinfo->cursor->on)
-			*(rinfo->riva.CURSORPOS) = (rinfo->cursor->pos.x & 0xFFFF)
+			rinfo->riva.PRAMDAC[0x0000300/4] = (rinfo->cursor->pos.x & 0xFFFF)
 						   | (rinfo->cursor->pos.y << 16);
 		rinfo->riva.ShowHideCursor(&rinfo->riva, rinfo->cursor->on);
 		if (!noblink)
@@ -523,10 +822,16 @@ static void rivafb_exit_cursor(struct rivafb_info *rinfo)
  * CALLED FROM:
  * riva_load_video_mode()
  */
-static void rivafb_download_cursor(struct rivafb_info *rinfo)
+static void rivafb_download_cursor(struct rivafb_info *rinfo, int level)
 {
 	int i, save;
 	int *image;
+	static int maxlevel=0;
+	
+	if (level<maxlevel)
+	  return;
+	if (level>maxlevel)
+	  maxlevel=level;
 	
 	if (!rinfo->cursor) return;
 
@@ -639,7 +944,7 @@ static void rivafb_cursor(struct display *p, int mode, int x, int y)
 		if (c->last_move_delay <= 1) { /* rapid cursor movement */
 			c->vbl_cnt = CURSOR_SHOW_DELAY;
 		} else {
-			*(rinfo->riva.CURSORPOS) = (x & 0xFFFF) | (y << 16);
+			rinfo->riva.PRAMDAC[0x0000300/4] = (x & 0xFFFF) | (y << 16);
 			rinfo->riva.ShowHideCursor(&rinfo->riva, 1);
 			if (!noblink) c->vbl_cnt = CURSOR_HIDE_DELAY;
 			c->on = 1;
@@ -648,6 +953,81 @@ static void rivafb_cursor(struct display *p, int mode, int x, int y)
 		c->enable = 1;
 		break;
 	}
+}
+
+
+static void rivafb_amithlon_poscursor(struct rivafb_info *rinfo,
+				      unsigned int x,
+				      unsigned int y,
+				      unsigned int on)
+{
+	struct riva_cursor *c = rinfo->cursor;
+
+	if (!c)	return;
+
+	if (!on)
+	  x=y=0xffffffff;
+
+	if (c->pos.x == x && c->pos.y == y)
+		return;
+	c->enable = 0;
+	c->pos.x = x;
+	c->pos.y = y;
+	rinfo->riva.PRAMDAC[0x0000300/4] = (rinfo->cursor->pos.x & 0xFFFF) | (rinfo->cursor->pos.y << 16);
+//	*(rinfo->riva.CURSORPOS) = (x & 0xFFFF) | (y << 16);
+	rinfo->riva.ShowHideCursor(&rinfo->riva, on);
+}
+
+static void rivafb_amithlon_setcursor(struct rivafb_info *rinfo, 
+				      unsigned int* data,
+				      unsigned char* red,
+				      unsigned char* green,
+				      unsigned char* blue)
+{
+	struct riva_cursor *c = rinfo->cursor;
+	int i, j, idx;
+	int width,height;
+
+	width=height=32;
+	if (c) {
+		if (width > MAX_CURS) width = MAX_CURS;
+		if (height > MAX_CURS) height = MAX_CURS;
+
+		c->size.x = width;
+		c->size.y = height;
+		
+		idx = 0;
+
+		for (i = 0; i < height; i++) {
+		  int p1,p2;
+		  p1=data[2*i];
+		  p2=data[2*i+1];
+		  
+		  for (j = 0; j < width; j++,idx++) {
+		    int b1,b2,v;
+		    unsigned int colour;
+
+		    b1=!!(p1&(1<<(31-j)));
+		    b2=!!(p2&(1<<(31-j)));
+		    v=b1+2*b2;
+
+		    colour=(((((unsigned int)red[v])>>3)&0x1f)<<10) |
+		      (((((unsigned int)green[v])>>3)&0x1f)<<5) |
+		      (((((unsigned int)blue[v])>>3)&0x1f)<<0) | 
+		      0x8000;
+		    if (!v)
+		      colour=0;
+
+		    c->image[idx] = colour;
+		  }
+		  for (j = width; j < MAX_CURS; j++,idx++)
+		    c->image[idx] = TRANSPARENT_COLOR;
+		}
+		for (i = height; i < MAX_CURS; i++)
+		  for (j = 0; j < MAX_CURS; j++,idx++)
+		    c->image[idx] = TRANSPARENT_COLOR;
+	}
+	rivafb_download_cursor(rinfo,1);
 }
 
 
@@ -863,6 +1243,7 @@ static void riva_load_video_mode(struct rivafb_info *rinfo,
 	struct riva_regs newmode;
 	int bpp, width, hDisplaySize, hDisplay, hStart,
 	    hEnd, hTotal, height, vDisplay, vStart, vEnd, vTotal, dotClock;
+	int hBlankStart, hBlankEnd, vBlankStart, vBlankEnd;
 
 	/* time to calculate */
 
@@ -878,7 +1259,10 @@ static void riva_load_video_mode(struct rivafb_info *rinfo,
 	hEnd = (hDisplaySize + video_mode->right_margin +
 		video_mode->hsync_len) / 8 - 1;
 	hTotal = (hDisplaySize + video_mode->right_margin +
-		  video_mode->hsync_len + video_mode->left_margin) / 8 - 1;
+		  video_mode->hsync_len + video_mode->left_margin) / 8 - 5;
+	hBlankStart = hDisplay;
+	hBlankEnd = hTotal + 4;
+
 	height = video_mode->yres_virtual;
 	vDisplay = video_mode->yres - 1;
 	vStart = video_mode->yres + video_mode->lower_margin - 1;
@@ -886,50 +1270,104 @@ static void riva_load_video_mode(struct rivafb_info *rinfo,
 	       video_mode->vsync_len - 1;
 	vTotal = video_mode->yres + video_mode->lower_margin +
 		 video_mode->vsync_len + video_mode->upper_margin + 2;
+	vBlankStart = vDisplay;
+	vBlankEnd = vTotal + 1;
 	dotClock = 1000000000 / video_mode->pixclock;
 
 	memcpy(&newmode, &reg_template, sizeof(struct riva_regs));
 
-	newmode.crtc[0x0] = Set8Bits (hTotal - 4);
+	if (rinfo->FlatPanel) {
+		vStart = vTotal - 3;
+		vEnd = vTotal - 2;
+		vBlankStart = vStart;
+		hStart = hTotal - 3;
+		hEnd = hTotal - 2;
+		hBlankEnd = hTotal + 4;
+	}
+
+	newmode.crtc[0x0] = Set8Bits (hTotal); 
 	newmode.crtc[0x1] = Set8Bits (hDisplay);
-	newmode.crtc[0x2] = Set8Bits (hDisplay);
-	newmode.crtc[0x3] = SetBitField (hTotal, 4: 0, 4:0) | SetBit (7);
+	newmode.crtc[0x2] = Set8Bits (hBlankStart);
+	newmode.crtc[0x3] = SetBitField (hBlankEnd, 4: 0, 4:0) | SetBit (7);
 	newmode.crtc[0x4] = Set8Bits (hStart);
-	newmode.crtc[0x5] = SetBitField (hTotal, 5: 5, 7:7)
+	newmode.crtc[0x5] = SetBitField (hBlankEnd, 5: 5, 7:7)
 		| SetBitField (hEnd, 4: 0, 4:0);
 	newmode.crtc[0x6] = SetBitField (vTotal, 7: 0, 7:0);
 	newmode.crtc[0x7] = SetBitField (vTotal, 8: 8, 0:0)
 		| SetBitField (vDisplay, 8: 8, 1:1)
 		| SetBitField (vStart, 8: 8, 2:2)
-		| SetBitField (vDisplay, 8: 8, 3:3)
+		| SetBitField (vBlankStart, 8: 8, 3:3)
 		| SetBit (4)
 		| SetBitField (vTotal, 9: 9, 5:5)
 		| SetBitField (vDisplay, 9: 9, 6:6)
 		| SetBitField (vStart, 9: 9, 7:7);
-	newmode.crtc[0x9] = SetBitField (vDisplay, 9: 9, 5:5)
+	newmode.crtc[0x9] = SetBitField (vBlankStart, 9: 9, 5:5)
 		| SetBit (6);
 	newmode.crtc[0x10] = Set8Bits (vStart);
 	newmode.crtc[0x11] = SetBitField (vEnd, 3: 0, 3:0)
 		| SetBit (5);
 	newmode.crtc[0x12] = Set8Bits (vDisplay);
-	newmode.crtc[0x13] = ((width / 8) * ((bpp + 1) / 8)) & 0xFF;
-	newmode.crtc[0x15] = Set8Bits (vDisplay);
-	newmode.crtc[0x16] = Set8Bits (vTotal + 1);
+	newmode.crtc[0x13] = (width / 8) * ((bpp + 1) / 8);
+	newmode.crtc[0x15] = Set8Bits (vBlankStart);
+	newmode.crtc[0x16] = Set8Bits (vBlankEnd);
 
+	newmode.ext.screen = SetBitField(hBlankEnd,6:6,4:4)
+		| SetBitField(vBlankStart,10:10,3:3)
+		| SetBitField(vStart,10:10,2:2)
+		| SetBitField(vDisplay,10:10,1:1)
+		| SetBitField(vTotal,10:10,0:0);
+	newmode.ext.horiz  = SetBitField(hTotal,8:8,0:0) 
+		| SetBitField(hDisplay,8:8,1:1)
+		| SetBitField(hBlankStart,8:8,2:2)
+		| SetBitField(hStart,8:8,3:3);
+	newmode.ext.extra  = SetBitField(vTotal,11:11,0:0)
+		| SetBitField(vDisplay,11:11,2:2)
+		| SetBitField(vStart,11:11,4:4)
+		| SetBitField(vBlankStart,11:11,6:6); 
+
+	/* CalcStateExt does this already */
+	/*
 	newmode.ext.bpp = bpp;
 	newmode.ext.width = width;
 	newmode.ext.height = height;
+	*/
+	newmode.ext.interlace = 0xff; /* interlace off */
+
+	if(rinfo->riva.Architecture >= NV_ARCH_10)
+		rinfo->riva.CURSOR = (U032 *)(rinfo->fb_base + rinfo->riva.CursorStart);
 
 	rinfo->riva.CalcStateExt(&rinfo->riva, &newmode.ext, bpp, width,
-				  hDisplaySize, hDisplay, hStart, hEnd,
-				  hTotal, height, vDisplay, vStart, vEnd,
-				  vTotal, dotClock);
+				  hDisplaySize, height, dotClock);
 
+	newmode.ext.scale = rinfo->riva.PRAMDAC[0x00000848/4] & 0xfff000ff;
+	if(rinfo->FlatPanel == 1) {
+		newmode.ext.pixel |= (1 << 7);
+		newmode.ext.scale |= (1 << 8) ;
+	}
+	if(rinfo->SecondCRTC) {
+		newmode.ext.head  = rinfo->riva.PCRTC0[0x00000860/4] & ~0x00001000;
+		newmode.ext.head2 = rinfo->riva.PCRTC0[0x00002860/4] | 0x00001000;
+		newmode.ext.crtcOwner = 3;
+		//newmode.ext.pllsel |= 0x20000800;
+		//newmode.ext.vpll2 = newmode.ext.vpll;
+		newmode.ext.vpll2 = rinfo->riva.PRAMDAC0[0x00000520/4];
+	} else if(rinfo->riva.twoHeads) {
+		newmode.ext.head  =  rinfo->riva.PCRTC0[0x00000860/4] | 0x00001000;
+		newmode.ext.head2 =  rinfo->riva.PCRTC0[0x00002860/4] & ~0x00001000;
+		newmode.ext.crtcOwner = 0;
+		newmode.ext.vpll2 = rinfo->riva.PRAMDAC0[0x00000520/4];
+	}
+
+	newmode.ext.cursorConfig = 0x02000100;
+	newmode.ext.vpllB = 0;
+	newmode.ext.vpll2B = 0;
 	rinfo->current_state = newmode;
 	riva_load_state(rinfo, &rinfo->current_state);
 
 	rinfo->riva.LockUnlock(&rinfo->riva, 0); /* important for HW cursor */
-	rivafb_download_cursor(rinfo);
+	rivafb_download_cursor(rinfo,0);
+
+	rivafb_blank(0, (struct fb_info *)rinfo);
 }
 
 /**
@@ -1333,6 +1771,7 @@ static int rivafb_get_fix(struct fb_fix_screeninfo *fix, int con,
 		break;
 	case NV_ARCH_10:	/* FIXME: ID for GeForce */
 	case NV_ARCH_20:
+	case NV_ARCH_30:
 		fix->accel = FB_ACCEL_NV4;
 		break;
 
@@ -1369,6 +1808,7 @@ static int rivafb_set_var(struct fb_var_screeninfo *var, int con,
 	int nom, den;		/* translating from pixels->bytes */
 	int accel;
 	unsigned chgvar = 0;
+	int i;
 
 	DPRINTK("ENTER\n");
 
@@ -1519,6 +1959,12 @@ static int rivafb_set_var(struct fb_var_screeninfo *var, int con,
 	riva_load_video_mode(rivainfo, &v);
 	if (accel) riva_setup_accel(rivainfo);
 
+
+        for (i = 0; i < 256; i++) {
+        	VGA_WR08(rivainfo->riva.PCIO, 0x03D4, i);
+	        printk(KERN_INFO PFX "0x%02X - 0x%02X\n", i, VGA_RD08(rivainfo->riva.PCIO, 0x03D5));
+        }
+
 	DPRINTK("EXIT, returning 0\n");
 	return 0;
 }
@@ -1610,11 +2056,12 @@ static int rivafb_pan_display(struct fb_var_screeninfo *var, int con,
 
 	assert(rivainfo != NULL);
 
+#if 0
 	if (var->xoffset > (var->xres_virtual - var->xres))
 		return -EINVAL;
 	if (var->yoffset > (var->yres_virtual - var->yres))
 		return -EINVAL;
-
+#endif
 	dsp = (con < 0) ? rivainfo->info.disp : &fb_display[con];
 
 	if (var->vmode & FB_VMODE_YWRAP) {
@@ -1622,9 +2069,11 @@ static int rivafb_pan_display(struct fb_var_screeninfo *var, int con,
 		    || var->yoffset >= dsp->var.yres_virtual
 		    || var->xoffset) return -EINVAL;
 	} else {
+#if 0
 		if (var->xoffset + dsp->var.xres > dsp->var.xres_virtual ||
 		    var->yoffset + dsp->var.yres > dsp->var.yres_virtual)
 			return -EINVAL;
+#endif
 	}
 
 	base = var->yoffset * dsp->line_length + var->xoffset;
@@ -1646,21 +2095,208 @@ static int rivafb_pan_display(struct fb_var_screeninfo *var, int con,
 	return 0;
 }
 
+#include "../amithlon.h"
+#include <asm/uaccess.h>
+
+void riva_rectfill(struct rivafb_info *rinfo, int sy,
+		   int sx, int height, int width, u_int color);
+void riva_rectcopy(struct rivafb_info *rinfo, int sy, int sx, int dy, int dx,
+		   int height, int width);
+int riva_blittemplate(struct rivafb_info *rinfo,
+		      u_int colour0, u_int colour1,
+		      int sy, int sx, 
+		      int height, int width, 
+		      int offset, char* data, int pitch,
+		      unsigned char rop3);
+int riva_rectcopy_complete(struct rivafb_info *rinfo, 
+			   int sy, int sx, 
+			   int dy, int dx,
+			   int height, int width,
+			   int spitch, int dpitch,
+			   int op,
+			   int oldpitch, int Bpp);
+void riva_drawline(struct rivafb_info *rinfo, int sy,
+		   int sx, int dy, int dx, 
+		   unsigned long offset, u_int color);
+void fbcon_cfb32_clear_amy(struct vc_data *conp, struct display *p, int sy, int sx,
+		       int height, int width, u32 colour);
+
+static inline void wait_for_idle(struct rivafb_info *rinfo)
+{
+    while (rinfo->riva.Busy(&rinfo->riva));
+}
+
+
 static int rivafb_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 			unsigned long arg, int con, struct fb_info *info)
 {
 	struct rivafb_info *rivainfo = (struct rivafb_info *)info;
 
+	struct display *xdisp;
+	struct vc_data *vdata;
+
+	int amy_accel;
+
+	amy_accel = 1;	
+	switch(rivainfo->riva.Architecture)
+		{
+		case NV_ARCH_20:
+		case NV_ARCH_30:
+			amy_accel = 0;
+		}
+
 	DPRINTK("ENTER\n");
 
 	assert(rivainfo != NULL);
 
-	/* no rivafb-specific ioctls */
+	xdisp = info->disp;
+	vdata = info->display_fg;
 
-	DPRINTK("EXIT, returning -EINVAL\n");
+	switch(cmd) {
+	 case AMITHLON_FILL_RECT: 
+		{
+	     		amithlon_fill af;
+	     		if (copy_from_user(&af, (void *) arg, sizeof(af)))
+		 		return -EFAULT;
+	     		riva_rectfill(rivainfo,
+			af.sy,
+			af.sx,
+			af.height,
+			af.width,
+			af.colour);
+	     		wait_for_idle(rivainfo);
+	     		return 0;
+		}
+	case AMITHLON_DRAW_LINE: 
+		{
+			if (amy_accel == 1) {
+	     			amithlon_line al;
+		        	if (copy_from_user(&al, (void *) arg, sizeof(al)))
+		 			return -EFAULT;
+	     			riva_drawline(rivainfo,
+						al.sy,
+						al.sx,
+						al.dy,
+						al.dx,
+						al.offset,
+						al.colour);
+	     			wait_for_idle(rivainfo);
+	     			return 0; 
+				}
+				else
+				{
+					return -EINVAL;
+				}
+		}
+	 case AMITHLON_COPY_RECT: 
+		{ 
+	   		amithlon_copy ac;
+	     		if (copy_from_user(&ac, (void *) arg, sizeof(ac)))
+		 		return -EFAULT;
+	     		riva_rectcopy(rivainfo,
+			ac.sy,
+			ac.sx,
+			ac.dy,
+			ac.dx,
+			ac.height,
+			ac.width);
+	     		wait_for_idle(rivainfo);
+	     		return 0;
+		}
 
-	return -EINVAL;
-}
+
+	case AMITHLON_COPY_RECT_COMPLETE: 
+	  {
+		    amithlon_copy_complete acr;
+		    int answer;
+		    if (copy_from_user(&acr, (void *) arg, sizeof(acr)))
+			      return -EFAULT;
+		    answer=riva_rectcopy_complete(rivainfo,
+					  acr.sy,
+					  acr.sx,
+					  acr.dy,
+					  acr.dx,
+					  acr.height,
+					  acr.width,
+					  acr.spitch,
+					  acr.dpitch,
+					  acr.op,
+					  acr.oldpitch,
+					  acr.Bpp);
+		    wait_for_idle(rivainfo);
+		    return answer;
+          }
+
+	 case AMITHLON_BLIT_TEMP: 
+		{ 
+		 if (amy_accel == 1)
+		     {
+		     amithlon_blittemplate ab;
+		     int answer=0;
+		     if (copy_from_user(&ab, (void *) arg, sizeof(ab)))
+			 return -EFAULT;
+		     answer=riva_blittemplate(rivainfo,
+				      ab.colour0,
+				      ab.colour1,
+				      ab.sy,
+				      ab.sx,
+				      ab.height,
+				      ab.width,
+				      ab.offset,
+				      ab.data,
+				      ab.pitch,
+				      ab.rop3);
+		     wait_for_idle(rivainfo);
+		     return answer; 
+			}
+			else
+			{
+			return -EINVAL;
+			}
+		}
+
+
+	case AMITHLON_MAXCLOCK:
+	  {
+	    unsigned int answer=rivainfo->dclk_max/1000;
+
+	    if (put_user(answer, (u_int32_t*)arg))
+	      return -EFAULT;
+	    return 0;
+	  }
+	case AMITHLON_SET_CURSOR:
+	  {
+	    unsigned int data[64];
+	    unsigned char red[4];
+	    unsigned char green[4];
+	    unsigned char blue[4];
+	    amithlon_setcursor asc;
+
+	    if (copy_from_user(&asc, (void *) arg, sizeof(asc)))
+	      return -EFAULT;
+	    if (copy_from_user(data, asc.data, 64*sizeof(unsigned int)))
+	      return -EFAULT;
+	    if (copy_from_user(red, asc.red, 4*sizeof(unsigned char)))
+	      return -EFAULT;
+	    if (copy_from_user(green, asc.green, 4*sizeof(unsigned char)))
+	      return -EFAULT;
+	    if (copy_from_user(blue, asc.blue, 4*sizeof(unsigned char)))
+	      return -EFAULT;
+	    rivafb_amithlon_setcursor(rivainfo,data,red,green,blue);
+	    return 0;
+	  }
+	case AMITHLON_POS_CURSOR:
+	  {
+	    amithlon_poscursor apc;
+	    if (copy_from_user(&apc, (void *) arg, sizeof(apc)))
+	      return -EFAULT;
+	    rivafb_amithlon_poscursor(rivainfo,apc.x,apc.y,apc.on);
+	    return 0;
+	  } 
+	 default:
+	    return -EINVAL; 
+
+}}
 
 static int rivafb_rasterimg(struct fb_info *info, int start)
 {
@@ -1780,6 +2416,10 @@ static int __devinit riva_init_disp_var(struct rivafb_info *rinfo)
 		fb_find_mode(&rinfo->disp.var, &rinfo->info, mode_option,
 			     NULL, 0, NULL, 8);
 #endif
+	if (rinfo->use_default_var)
+		/* We will use the modified default var */
+		rinfo->disp.var = rivafb_default_var;
+	
 	return 0;
 }
 
@@ -1796,6 +2436,12 @@ static int __devinit riva_init_disp(struct rivafb_info *rinfo)
 	disp = &rinfo->disp;
 
 	disp->var = rivafb_default_var;
+
+	switch(rinfo->riva.Architecture)
+		{
+		case NV_ARCH_30:
+//			noaccel = 1;
+		}
 	
 	if (noaccel)
 		disp->var.accel_flags &= ~FB_ACCELF_TEXT;
@@ -1850,6 +2496,119 @@ static int __devinit riva_set_fbinfo(struct rivafb_info *rinfo)
 	return 0;
 }
 
+#ifdef CONFIG_ALL_PPC
+static int riva_get_EDID_OF(struct rivafb_info *rinfo)
+{
+	struct device_node *dp;
+	unsigned char *pedid = NULL;
+
+	dp = pci_device_to_OF_node(rinfo->pd);
+	pedid = (unsigned char *)get_property(dp, "EDID,B", 0);
+
+	if (pedid) {
+		rinfo->EDID = pedid;
+		return 1;
+	} else
+		return 0;
+}
+#endif /* CONFIG_ALL_PPC */
+
+static int riva_dfp_parse_EDID(struct rivafb_info *rinfo)
+{
+	unsigned char *block = rinfo->EDID;
+
+	if (!block)
+		return 0;
+
+	/* jump to detailed timing block section */
+	block += 54;
+
+	rinfo->clock = (block[0] + (block[1] << 8));
+	rinfo->panel_xres = (block[2] + ((block[4] & 0xf0) << 4));
+	rinfo->hblank = (block[3] + ((block[4] & 0x0f) << 8));
+	rinfo->panel_yres = (block[5] + ((block[7] & 0xf0) << 4));
+	rinfo->vblank = (block[6] + ((block[7] & 0x0f) << 8));
+	rinfo->hOver_plus = (block[8] + ((block[11] & 0xc0) << 2));
+	rinfo->hSync_width = (block[9] + ((block[11] & 0x30) << 4));
+	rinfo->vOver_plus = ((block[10] >> 4) + ((block[11] & 0x0c) << 2));
+	rinfo->vSync_width = ((block[10] & 0x0f) + ((block[11] & 0x03) << 4));
+	rinfo->interlaced = ((block[17] & 0x80) >> 7);
+	rinfo->synct = ((block[17] & 0x18) >> 3);
+	rinfo->misc = ((block[17] & 0x06) >> 1);
+	rinfo->hAct_high = rinfo->vAct_high = 0;
+	if (rinfo->synct == 3) {
+		if (rinfo->misc & 2)
+			rinfo->hAct_high = 1;
+		if (rinfo->misc & 1)
+			rinfo->vAct_high = 1;
+	}
+
+	printk(KERN_INFO PFX
+			"detected DFP panel size from EDID: %dx%d\n", 
+			rinfo->panel_xres, rinfo->panel_yres);
+
+	rinfo->got_dfpinfo = 1;
+
+	return 1;
+}
+
+static void riva_update_default_var(struct rivafb_info *rinfo)
+{
+	struct fb_var_screeninfo *var = &rivafb_default_var;
+
+        var->xres = rinfo->panel_xres;
+        var->yres = rinfo->panel_yres;
+        var->xres_virtual = rinfo->panel_xres;
+        var->yres_virtual = rinfo->panel_yres;
+        var->xoffset = var->yoffset = 0;
+        var->bits_per_pixel = 8;
+        var->pixclock = 100000000 / rinfo->clock;
+        var->left_margin = (rinfo->hblank - rinfo->hOver_plus - rinfo->hSync_width);
+        var->right_margin = rinfo->hOver_plus;
+        var->upper_margin = (rinfo->vblank - rinfo->vOver_plus - rinfo->vSync_width);
+        var->lower_margin = rinfo->vOver_plus;
+        var->hsync_len = rinfo->hSync_width;
+        var->vsync_len = rinfo->vSync_width;
+        var->sync = 0;
+
+        if (rinfo->synct == 3) {
+                if (rinfo->hAct_high)
+                        var->sync |= FB_SYNC_HOR_HIGH_ACT;
+                if (rinfo->vAct_high)
+                        var->sync |= FB_SYNC_VERT_HIGH_ACT;
+        }
+ 
+        var->vmode = 0;
+        if (rinfo->interlaced)
+                var->vmode |= FB_VMODE_INTERLACED;
+
+	if (!noaccel)
+		var->accel_flags |= FB_ACCELF_TEXT;
+        
+        rinfo->use_default_var = 1;
+}
+
+
+static void riva_get_EDID(struct rivafb_info *rinfo)
+{
+#ifdef CONFIG_ALL_PPC
+	if (!riva_get_EDID_OF(rinfo))
+		printk("rivafb: could not retrieve EDID from OF\n");
+#else
+	/* XXX use other methods later */
+#endif
+}
+
+
+static void riva_get_dfpinfo(struct rivafb_info *rinfo)
+{
+	if (riva_dfp_parse_EDID(rinfo))
+		riva_update_default_var(rinfo);
+
+	if (rinfo->got_dfpinfo == 1) /* if user specified flatpanel, we respect that */
+		rinfo->FlatPanel = 1;
+}
+
 
 
 /* ------------------------------------------------------------------------- *
@@ -1876,10 +2635,27 @@ static int __devinit rivafb_init_one(struct pci_dev *pd,
 	rinfo->drvr_name = rci->name;
 	rinfo->riva.Architecture = rci->arch_rev;
 
+	rinfo->Chipset = pd->device;
+	printk(KERN_INFO PFX "nVidia device/chipset %X\n", rinfo->Chipset);
+	
+	rinfo->FlatPanel = flatpanel;
+	if (flatpanel == 1)
+		printk(KERN_INFO PFX "flatpanel support enabled\n");
+	rinfo->forceCRTC = forceCRTC;
+	
 	rinfo->pd = pd;
 	rinfo->base0_region_size = pci_resource_len(pd, 0);
 	rinfo->base1_region_size = pci_resource_len(pd, 1);
 
+	{
+		/* enable IO and mem if not already done */
+		unsigned short cmd;
+
+		pci_read_config_word(pd, PCI_COMMAND, &cmd);
+		cmd |= (PCI_COMMAND_IO | PCI_COMMAND_MEMORY);
+		pci_write_config_word(pd, PCI_COMMAND, cmd);
+	}
+	
 	rinfo->ctrl_base_phys = pci_resource_start(rinfo->pd, 0);
 	rinfo->fb_base_phys = pci_resource_start(rinfo->pd, 1);
 
@@ -1893,58 +2669,45 @@ static int __devinit rivafb_init_one(struct pci_dev *pd,
 				   rinfo->base0_region_size);
 	if (!rinfo->ctrl_base) {
 		printk(KERN_ERR PFX "cannot ioremap MMIO base\n");
-		goto err_out_free_base1;
-	}
-	
-	rinfo->riva.EnableIRQ = 0;
-	rinfo->riva.PRAMDAC = (unsigned *)(rinfo->ctrl_base + 0x00680000);
-	rinfo->riva.PFB = (unsigned *)(rinfo->ctrl_base + 0x00100000);
-	rinfo->riva.PFIFO = (unsigned *)(rinfo->ctrl_base + 0x00002000);
-	rinfo->riva.PGRAPH = (unsigned *)(rinfo->ctrl_base + 0x00400000);
-	rinfo->riva.PEXTDEV = (unsigned *)(rinfo->ctrl_base + 0x00101000);
-	rinfo->riva.PTIMER = (unsigned *)(rinfo->ctrl_base + 0x00009000);
-	rinfo->riva.PMC = (unsigned *)(rinfo->ctrl_base + 0x00000000);
-	rinfo->riva.FIFO = (unsigned *)(rinfo->ctrl_base + 0x00800000);
-
-	rinfo->riva.PCIO = (U008 *)(rinfo->ctrl_base + 0x00601000);
-	rinfo->riva.PDIO = (U008 *)(rinfo->ctrl_base + 0x00681000);
-	rinfo->riva.PVIO = (U008 *)(rinfo->ctrl_base + 0x000C0000);
-
-	rinfo->riva.IO = (MISCin(rinfo) & 0x01) ? 0x3D0 : 0x3B0;
-
-	if (rinfo->riva.Architecture == NV_ARCH_03) {
-		/*
-		 * We have to map the full BASE_1 aperture for Riva128's
-		 * because they use the PRAMIN set in "framebuffer" space
-		 */
-		if (!request_mem_region(rinfo->fb_base_phys,
-					rinfo->base1_region_size, "rivafb")) {
-			printk(KERN_ERR PFX "cannot reserve FB region\n");
-			goto err_out_free_base0;
-		}
-	
-		rinfo->fb_base = ioremap(rinfo->fb_base_phys,
-					 rinfo->base1_region_size);
-		if (!rinfo->fb_base) {
-			printk(KERN_ERR PFX "cannot ioremap FB base\n");
-			goto err_out_iounmap_ctrl;
-		}
+		goto err_out_free_base0;
 	}
 
+	riva_get_EDID(rinfo);
+
+	riva_get_dfpinfo(rinfo);
 
 	switch (rinfo->riva.Architecture) {
 	case NV_ARCH_03:
-		rinfo->riva.PRAMIN = (unsigned *)(rinfo->fb_base + 0x00C00000);
-		break;
+		/* Riva128's PRAMIN is in the "framebuffer" space
+		 * Since these cards were never made with more than 8 megabytes
+		 * we can safely allocate this seperately.
+		 */
+		if (!request_mem_region(rinfo->fb_base_phys + 0x00C00000,
+					 0x00008000, "rivafb")) {
+			printk(KERN_ERR PFX "cannot reserve PRAMIN region\n");
+			goto err_out_iounmap_ctrl;
+		}
+		rinfo->riva.PRAMIN = ioremap(rinfo->fb_base_phys + 0x00C00000,
+				 0x00008000);
+		if (!rinfo->riva.PRAMIN) {
+			printk(KERN_ERR PFX "cannot ioremap PRAMIN region\n");
+			goto err_out_free_nv3_pramin;
+		}
+ 		break;
 	case NV_ARCH_04:
 	case NV_ARCH_10:
 	case NV_ARCH_20:
-		rinfo->riva.PCRTC = (unsigned *)(rinfo->ctrl_base + 0x00600000);
-		rinfo->riva.PRAMIN = (unsigned *)(rinfo->ctrl_base + 0x00710000);
-		break;
+	case NV_ARCH_30:
+		rinfo->riva.PCRTC0 = (unsigned *)(rinfo->ctrl_base + 0x00600000);
+ 		rinfo->riva.PRAMIN = (unsigned *)(rinfo->ctrl_base + 0x00710000);
+ 		break;
 	}
 
-	RivaGetConfig(&rinfo->riva);
+	riva_common_setup(rinfo);
+
+	if (rinfo->riva.Architecture == NV_ARCH_03) {
+		rinfo->riva.PCRTC = rinfo->riva.PCRTC0 = rinfo->riva.PGRAPH;
+	}
 
 	rinfo->ram_amount = rinfo->riva.RamAmountKBytes * 1024;
 	rinfo->dclk_max = rinfo->riva.MaxVClockFreqKHz * 1000;
@@ -1956,16 +2719,16 @@ static int __devinit rivafb_init_one(struct pci_dev *pd,
 		 */
 		if (!request_mem_region(rinfo->fb_base_phys,
 					rinfo->ram_amount, "rivafb")) {
-			printk(KERN_ERR PFX "cannot reserve FB region\n");
-			goto err_out_free_base0;
-		}
+		printk(KERN_ERR PFX "cannot reserve FB region\n");
+		goto err_out_iounmap_nv3_pramin;
+	}
 	
-		rinfo->fb_base = ioremap(rinfo->fb_base_phys,
-					 rinfo->ram_amount);
-		if (!rinfo->fb_base) {
-			printk(KERN_ERR PFX "cannot ioremap FB base\n");
-			goto err_out_iounmap_ctrl;
-		}
+	rinfo->fb_base = ioremap(rinfo->fb_base_phys,
+				 rinfo->ram_amount);
+	if (!rinfo->fb_base) {
+		printk(KERN_ERR PFX "cannot ioremap FB base\n");
+		goto err_out_free_base1;
+	}
 	}
 
 #ifdef CONFIG_MTRR
@@ -2022,10 +2785,16 @@ err_out_cursor:
 	rivafb_exit_cursor(rinfo);
 /* err_out_iounmap_fb: */
 	iounmap(rinfo->fb_base);
+err_out_free_base1:
+	release_mem_region(rinfo->fb_base_phys, rinfo->ram_amount);
+err_out_iounmap_nv3_pramin:
+	if (rinfo->riva.Architecture == NV_ARCH_03) 
+		iounmap((caddr_t)rinfo->riva.PRAMIN);
+err_out_free_nv3_pramin:
+	if (rinfo->riva.Architecture == NV_ARCH_03)
+		release_mem_region(rinfo->fb_base_phys + 0x00C00000, 0x00008000);
 err_out_iounmap_ctrl:
 	iounmap(rinfo->ctrl_base);
-err_out_free_base1:
-	release_mem_region(rinfo->fb_base_phys, rinfo->base1_region_size);
 err_out_free_base0:
 	release_mem_region(rinfo->ctrl_base_phys, rinfo->base0_region_size);
 err_out_kfree:
@@ -2063,6 +2832,11 @@ static void __devexit rivafb_remove_one(struct pci_dev *pd)
 	release_mem_region(board->fb_base_phys,
 			   board->ram_amount);
 
+	if (board->riva.Architecture == NV_ARCH_03) {
+		iounmap((caddr_t)board->riva.PRAMIN);
+		release_mem_region(board->fb_base_phys + 0x00C00000, 0x00008000);
+	}
+	
 	kfree(board);
 
 	pci_set_drvdata(pd, NULL);
@@ -2108,6 +2882,16 @@ int __init rivafb_setup(char *options)
 		} else if (!strncmp(this_opt, "nomtrr", 6)) {
 			nomtrr = 1;
 #endif
+		} else if (!strncmp(this_opt, "forceCRTC", 9)) {
+			char *p;
+			
+			p = this_opt + 9;
+			if (!*p || !*(++p)) continue; 
+			forceCRTC = *p - '0';
+			if (forceCRTC < 0 || forceCRTC > 1) 
+				forceCRTC = -1;
+		} else if (!strncmp(this_opt, "flatpanel", 9)) {
+			flatpanel = 1;
 		} else if (!strncmp(this_opt, "nohwcursor", 10)) {
 			nohwcursor = 1;
 		} else
@@ -2141,6 +2925,7 @@ int __init rivafb_init(void)
 	err = pci_module_init(&rivafb_driver);
 	if (err)
 		return err;
+	pci_register_driver(&rivafb_driver);
 	return 0;
 }
 
@@ -2164,6 +2949,11 @@ MODULE_PARM(nohwcursor, "i");
 MODULE_PARM_DESC(nohwcursor, "Disables hardware cursor (0 or 1=disabled) (default=0)");
 MODULE_PARM(noblink, "i");
 MODULE_PARM_DESC(noblink, "Disables hardware cursor blinking (0 or 1=disabled) (default=0)");
+MODULE_PARM(flatpanel, "i");
+MODULE_PARM_DESC(flatpanel, "Enables experimental flat panel support for some chipsets. (0 or 1=enabled) (default=0)");
+MODULE_PARM(forceCRTC, "i");
+MODULE_PARM_DESC(forceCRTC, "Forces usage of a particular CRTC in case autodetection fails. (0 or 1) (default=autodetect)");
+
 #ifdef CONFIG_MTRR
 MODULE_PARM(nomtrr, "i");
 MODULE_PARM_DESC(nomtrr, "Disables MTRR support (0 or 1=disabled) (default=0)");
@@ -2171,5 +2961,5 @@ MODULE_PARM_DESC(nomtrr, "Disables MTRR support (0 or 1=disabled) (default=0)");
 #endif /* MODULE */
 
 MODULE_AUTHOR("Ani Joshi, maintainer");
-MODULE_DESCRIPTION("Framebuffer driver for nVidia Riva 128, TNT, TNT2");
+MODULE_DESCRIPTION("Framebuffer driver for nVidia Riva 128, TNT, TNT2, and the GeForce series");
 MODULE_LICENSE("GPL");

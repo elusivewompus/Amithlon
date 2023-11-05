@@ -286,6 +286,11 @@ extern long pps_calcnt;		/* calibration intervals */
 extern long pps_errcnt;		/* calibration errors */
 extern long pps_stbcnt;		/* stability limit exceeded */
 
+/* UAE high precision timer interface */
+extern unsigned long current_latch; /* The current latch value for the timer chip */
+extern unsigned long long uae_alert; /* When to start checking timers */
+extern unsigned long long uae_nextevent; /* When to next trigger */
+extern void uae_trigger(void);
 #endif /* KERNEL */
 
 #endif /* LINUX_TIMEX_H */

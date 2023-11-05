@@ -2274,7 +2274,10 @@ static int scsi_register_device_module(struct Scsi_Device_Template *tpnt)
 	 * If any of the devices would match this driver, then perform the
 	 * init function.
 	 */
-	if (tpnt->init && tpnt->dev_noticed) {
+
+        /* We need to create the sg files no matter whether we actually
+           found any SCSI devices */
+	if (tpnt->init /* && tpnt->dev_noticed */) {
 		if ((*tpnt->init) ()) {
 			for (shpnt = scsi_hostlist; shpnt;
 			     shpnt = shpnt->next) {

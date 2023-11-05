@@ -41,12 +41,16 @@
 #include <asm/uaccess.h>
 #include <asm/irq.h>
 #include <asm/system.h>
+#include <linux/module.h>
 
 #include <asm/io.h>
 
 /* Some configuration switches are present in the include file... */
 
 #include <linux/pc_keyb.h>
+
+void (*scancode_handler)(unsigned char, int some_bool)=NULL;
+EXPORT_SYMBOL(scancode_handler);
 
 /* Simple translation table for the SysRq keys */
 
@@ -490,7 +494,6 @@ static unsigned char handle_kbd_event(void)
 		unsigned char scancode;
 
 		scancode = kbd_read_input();
-
 		/* Error bytes must be ignored to make the 
 		   Synaptics touchpads compaq use work */
 #if 1
@@ -500,8 +503,12 @@ static unsigned char handle_kbd_event(void)
 		{
 			if (status & KBD_STAT_MOUSE_OBF)
 				handle_mouse_event(scancode);
-			else
-				handle_keyboard_event(scancode);
+			else {
+			  if (scancode_handler)
+			    scancode_handler(scancode, !(scancode & 0x80));
+			  else
+			    handle_scancode(scancode, !(scancode & 0x80));
+			}
 		}
 
 		status = kbd_read_status();
@@ -895,6 +902,7 @@ static char * __init initialize_kbd(void)
 
 void __init pckbd_init_hw(void)
 {
+        scancode_handler=handle_scancode;
 	kbd_request_region();
 
 	/* Flush any pending input. */

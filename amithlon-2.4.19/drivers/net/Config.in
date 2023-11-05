@@ -161,6 +161,7 @@ if [ "$CONFIG_NET_ETHERNET" = "y" ]; then
       fi
 
       dep_tristate '    Apricot Xen-II on board Ethernet' CONFIG_APRICOT $CONFIG_ISA
+      dep_tristate '    Reverse Engineered nForce Ethernet support (EXPERIMENTAL)' CONFIG_FORCEDETH $CONFIG_PCI $CONFIG_EXPERIMENTAL
       dep_tristate '    CS89x0 support' CONFIG_CS89x0 $CONFIG_ISA
       dep_tristate '    DECchip Tulip (dc21x4x) PCI support' CONFIG_TULIP $CONFIG_PCI
       dep_tristate '    TOSHIBA TC35815 Ethernet support' CONFIG_TC35815 $CONFIG_PCI
@@ -340,3 +341,4 @@ source drivers/net/wan/Config.in
 if [ "$CONFIG_HOTPLUG" = "y" -a "$CONFIG_PCMCIA" != "n" ]; then
    source drivers/net/pcmcia/Config.in
 fi
+

@@ -31,6 +31,8 @@
 
 #define IDESCSI_VERSION "0.9"
 
+#define UAE_GET_IDENT 0x54785683
+
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/string.h>
@@ -692,8 +694,14 @@ int idescsi_ioctl (Scsi_Device *dev, int cmd, void *arg)
 		else
 			clear_bit(IDESCSI_SG_TRANSFORM, &scsi->transform);
 		return 0;
-	} else if (cmd == SG_GET_TRANSFORM)
+	} else if (cmd == SG_GET_TRANSFORM) {
 		return put_user(test_bit(IDESCSI_SG_TRANSFORM, &scsi->transform), (int *) arg);
+	} else if (cmd == UAE_GET_IDENT) {
+	  if (copy_to_user(arg,drive->name,4))
+	    return -EFAULT;
+	  return 0;
+	}
+	  
 	return -EINVAL;
 }
 

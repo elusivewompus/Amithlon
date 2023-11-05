@@ -26,7 +26,8 @@
 #ifdef CONFIG_X86_IO_APIC
 #define NR_IRQS 224
 #else
-#define NR_IRQS 16
+//#define NR_IRQS 16
+#define NR_IRQS 32 /* For Amithlon, we need at least 32.... */
 #endif
 
 static __inline__ int irq_cannonicalize(int irq)

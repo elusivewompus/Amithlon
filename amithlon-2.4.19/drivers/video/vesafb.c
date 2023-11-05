@@ -162,7 +162,8 @@ static int vesafb_get_fix(struct fb_fix_screeninfo *fix, int con,
 static int vesafb_get_var(struct fb_var_screeninfo *var, int con,
 			 struct fb_info *info)
 {
-	if(con==-1)
+	if(con==-1 || 1) // For amithlon, we want to read back the
+		// previously saved value at all times.
 		memcpy(var, &vesafb_defined, sizeof(struct fb_var_screeninfo));
 	else
 		*var=fb_display[con].var;
@@ -242,6 +243,11 @@ static int vesafb_set_var(struct fb_var_screeninfo *var, int con,
 {
 	static int first = 1;
 
+	if (var->nonstd==19690901) {
+		vesafb_defined=*var;
+		return 0;
+	}
+     
 	if (var->xres           != vesafb_defined.xres           ||
 	    var->yres           != vesafb_defined.yres           ||
 	    var->xres_virtual   != vesafb_defined.xres_virtual   ||
@@ -250,8 +256,8 @@ static int vesafb_set_var(struct fb_var_screeninfo *var, int con,
 	    var->xoffset                                         ||
 	    var->bits_per_pixel != vesafb_defined.bits_per_pixel ||
 	    var->nonstd) {
-		if (first) {
-			printk(KERN_ERR "Vesafb does not support changing the video mode\n");
+		if (first || 1) {
+			printk(KERN_ERR "Vesafb does not support changing the video mode (%d,%d)\n",var->nonstd,var->xres);
 			first = 0;
 		}
 		return -EINVAL;
@@ -519,13 +525,12 @@ int __init vesafb_init(void)
 	video_visual = (video_bpp == 8) ?
 		FB_VISUAL_PSEUDOCOLOR : FB_VISUAL_TRUECOLOR;
 
-	if (!request_mem_region(video_base, video_size, "vesafb")) {
-		printk(KERN_WARNING
-		       "vesafb: abort, cannot reserve video memory at 0x%lx\n",
-			video_base);
-		/* We cannot make this fatal. Sometimes this comes from magic
-		   spaces our resource handlers simply don't know about */
-	}
+  	if (!request_mem_region(video_base, video_size, "vesafb")) {
+ 		printk(KERN_ERR
+  		       "vesafb: abort, cannot reserve video memory at 0x%lx\n",
+  			video_base);
+ 		return -EBUSY;
+  	}
 
         video_vbase = ioremap(video_base, video_size);
 	if (!video_vbase) {

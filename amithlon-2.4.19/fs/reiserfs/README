@@ -1,71 +1,58 @@
-[LICENSING] 
-
-ReiserFS is hereby licensed under the GNU General
-Public License version 2.
-
-Source code files that contain the phrase "licensing governed by
-reiserfs/README" are "governed files" throughout this file.  Governed
-files are licensed under the GPL.  The portions of them owned by Hans
-Reiser, or authorized to be licensed by him, have been in the past,
-and likely will be in the future, licensed to other parties under
-other licenses.  If you add your code to governed files, and don't
-want it to be owned by Hans Reiser, put your copyright label on that
-code so the poor blight and his customers can keep things straight.
-All portions of governed files not labeled otherwise are owned by Hans
-Reiser, and by adding your code to it, widely distributing it to
-others or sending us a patch, and leaving the sentence in stating that
-licensing is governed by the statement in this file, you accept this.
-It will be a kindness if you identify whether Hans Reiser is allowed
-to license code labeled as owned by you on your behalf other than
-under the GPL, because he wants to know if it is okay to do so and put
-a check in the mail to you (for non-trivial improvements) when he
-makes his next sale.  He makes no guarantees as to the amount if any,
-though he feels motivated to motivate contributors, and you can surely
-discuss this with him before or after contributing.  You have the
-right to decline to allow him to license your code contribution other
-than under the GPL.
-
-Further licensing options are available for commercial and/or other
-interests directly from Hans Reiser: hans@reiser.to.  If you interpret
-the GPL as not allowing those additional licensing options, you read
-it wrongly, and Richard Stallman agrees with me, when carefully read
-you can see that those restrictions on additional terms do not apply
-to the owner of the copyright, and my interpretation of this shall
-govern for this license.  
-
-Finally, nothing in this license shall be interpreted to allow you to
-fail to fairly credit me, or to remove my credits, without my
-permission, unless you are an end user not redistributing to others.
-If you have doubts about how to properly do that, or about what is
-fair, ask.  (Last I spoke with him Richard was contemplating how best
-to address the fair crediting issue in the next GPL version.)
-
-[END LICENSING]
-
-Reiserfs is a file system based on balanced tree algorithms, which is
-described at http://devlinux.com/namesys.
+Reiserfs is a file system based on balanced tree algorithms, which is described at http://devlinux.com/namesys.
 
 Stop reading here.  Go there, then return.
 
-Send bug reports to yura@namesys.botik.ru.
+Send bug reports to reiser@idiom.com, or vs@namesys.botik.ru, or both.
 
 mkreiserfs and other utilities are in reiserfs/utils, or wherever your
-Linux provider put them.  There is some disagreement about how useful
-it is for users to get their fsck and mkreiserfs out of sync with the
-version of reiserfs that is in their kernel, with many important
-distributors wanting them out of sync.:-) Please try to remember to
-recompile and reinstall fsck and mkreiserfs with every update of
-reiserfs, this is a common source of confusion.  Note that some of the
-utilities cannot be compiled without accessing the balancing code
-which is in the kernel code, and relocating the utilities may require
-you to specify where that code can be found.
+Linux provider put them.  Note that some of the utilities cannot be
+compiled without accessing to the balancing code which is in the kernel
+code, and relocating the utilities may require you to specify where that
+code can be found.
 
-Yes, if you update your reiserfs kernel module you do have to
-recompile your kernel, most of the time.  The errors you get will be
-quite cryptic if your forget to do so.
+Try turning REISERFS_CHECK in reiserfs_fs.h on or off if you want error
+checking or speed, respectively.  Real users, as opposed to folks who
+want to hack, will want it off.
 
-Real users, as opposed to folks who want to hack and then understand
-what went wrong, will want REISERFS_CHECK off.
+[LICENSE] ReiserFS is hereby licensed under the GNU General
+Public License version 2.  Please see the file "COPYING"
+which should have accompanied this software distribution for
+details of that license.
+
+Since that license (particularly 2.b) is necessarily vague in certain
+areas due to its generality, the following interpretations shall govern.
+Some may consider these terms to be a supplemental license to the GPL.
+You may include ReiserFS in a Linux kernel which you may then include
+with anything, and you may even include it with a Linux kernel with
+non-GPL'd kernel modules.  You may include it in any kernel which is
+wholly GPL'd including its kernel modules which you may then include
+with anything.  If you wish to use it for a kernel which you sell usage
+or copying licenses for, which is not listed above, then you must obtain
+an additional license.  If you wish to integrate it with any other
+software system which is not GPL'd, without integrating it into an
+operating system kernel, then you must obtain an additional license.
+This is an interpretation of what is and is not part of the software
+program falling under the GPL section 2.b., and is intended as a
+specification of (with a slight supplement to), not an exception to, the
+GPL as applied to this particular piece of software.
+
+Further licensing options are available for commercial and/or other
+interests directly from Hans Reiser:  reiser@idiom.com.  If you
+interpret the GPL as not allowing those additional licensing options,
+you read it wrongly, when carefully read you can see that those
+restrictions on additional terms do not apply to the owner of the
+copyright, and my interpretation of this shall govern for this license.
+
+[END LICENSE]
+
+I try to find ways to make money for those who contribute to this code.
+My success in such efforts cannot be guaranteed though:-).  You are
+encouraged to add to it.  If you ask me to include it in my standard
+distribution, and you don't request an exception to this (if you want
+the exception, talk to me about it, don't be shy), you give ownership of
+the copyright to me, and you consent to my marketing exceptions to the
+GPL.  If you want to market it as part of a system you sell, please
+contact me.  
 
 Hideous Commercial Pitch: Spread your development costs across other OS
 vendors.  Select from the best in the world, not the best in your
@@ -76,7 +63,7 @@ decentralized internet development, and add value through your branded
 integration that you sell as an operating system.  Let your competitors
 be the ones to compete against the entire internet by themselves.  Be
 hip, get with the new economic trend, before your competitors do.  Send
-email to hans@reiser.to.
+email to reiser@idiom.com.
 
 To understand the code, after reading the website, start reading the
 code by reading reiserfs_fs.h first.
@@ -91,8 +78,9 @@ could be, and to make his code the best that it could be.  What resulted
 was quite remarkable. I don't think that money can ever motivate someone
 to work the way he did, he is one of the most selfless men I know.
 
-Yura helps with benchmarking, coding hashes, and block pre-allocation
-code.
+Yura joined us near the end of our project, and helped with such things
+as integrating hashing back into the code, and benchmarking different
+pieces of code to help with tuning analysis.
 
 Anatoly Pinchuk is a former member of our team who worked closely with
 Vladimir throughout the project's development.  He wrote a quite
@@ -102,22 +90,16 @@ that start on a node aligned boundary (there are reasons to want to node
 align files), and he invented and implemented indirect items and
 unformatted nodes as the solution.
 
-Konstantin Shvachko, with the help of the Russian version of a VC,
-tried to put me in a position where I was forced into giving control
-of the project to him.  (Fortunately, as the person paying the money
-for all salaries from my dayjob I owned all copyrights, and you can't
-really force takeovers of sole proprietorships.)  This was something
-curious, because he never really understood the value of our project,
-why we should do what we do, or why innovation was possible in
-general, but he was sure that he ought to be controlling it.  Every
-innovation had to be forced past him while he was with us.  He added
-two years to the time required to complete reiserfs, and was a net
-loss for me.  Mikhail Gilula was a brilliant innovator who also left
-in a destructive way that erased the value of his contributions, and
-that he was shown much generosity just makes it more painful.
+Two other former employees were involved who won't be getting credit
+here because they tried to kill the project at the end of it, and almost
+succeeded (they cost me maybe two years).  They wanted to force me to
+sell it to the company they tried to start.  They get to keep the money
+they got from me, and that is it.  When their "VC" said that he could
+get a hundred researchers to swear in Russian Court that I had had
+nothing to do with the development of treefs, I changed the name to
+reiserfs and registered the copyright.
 
-Grigory Zaigralin was an extremely effective system administrator for
-our group.
+Grigory Zaigralin was an extremely effective system administrator for our group.
 
 Igor Krasheninnikov was wonderful at hardware procurement, repair, and
 network installation.
@@ -135,27 +117,8 @@ He is just an amazing programmer.
 Igor Zagorovsky is writing much of the new item handler and extent code
 for our next major release.
 
-Alexander Zarochentcev (sometimes known as zam, or sasha), wrote the
-resizer, and is hard at work on implementing allocate on flush.  SGI
-implemented allocate on flush before us for XFS, and generously took
-the time to convince me we should do it also.  They are great people,
-and a great company.
-
-Yuri Shevchuk and Nikita Danilov are doing squid cache optimization.
-
-Vitaly Fertman is doing fsck.
-
-Jeff Mahoney, of SuSE, contributed a few cleanup fixes, most notably
-the endian safe patches which allow ReiserFS to run on any platform
-supported by the Linux kernel.
-
-SuSE, IntegratedLinux.com, Ecila, MP3.com, bigstorage.com, and the
-Alpha PC Company made it possible for me to not have a day job
-anymore, and to dramatically increase our staffing.  Ecila funded
-hypertext feature development, MP3.com funded journaling, SuSE funded
-core development, IntegratedLinux.com funded squid web cache
-appliances, bigstorage.com funded HSM, and the alpha PC company funded
-the alpha port.  Many of these tasks were helped by sponsors other
-than the ones just named.  SuSE has helped in much more than just
+Ecila, MP3, and SuSE (in chronological order) made it possible for me to
+not have a day job anymore, and to dramatically increase our staffing.
+Ecila funded hypertext feature development, MP3 funded journaling, and
+SuSE funded core development.  SuSE has helped in much more than just
 funding....
-
