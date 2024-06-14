@@ -1,0 +1,344 @@
+Only in amithlon-2.4.37.11/: amithlon.patch
+Only in amithlon-2.4.37.11/arch/i386/boot: 11image
+Only in amithlon-2.4.37.11/arch/i386/boot: Snktest2
+Only in amithlon-2.4.37.11/arch/i386/kernel: .depend
+Files linux-2.4.37.11/arch/i386/kernel/dmi_scan.c and amithlon-2.4.37.11/arch/i386/kernel/dmi_scan.c differ
+Files linux-2.4.37.11/arch/i386/kernel/i8259.c and amithlon-2.4.37.11/arch/i386/kernel/i8259.c differ
+Files linux-2.4.37.11/arch/i386/kernel/setup.c and amithlon-2.4.37.11/arch/i386/kernel/setup.c differ
+Files linux-2.4.37.11/arch/i386/kernel/time.c and amithlon-2.4.37.11/arch/i386/kernel/time.c differ
+Only in amithlon-2.4.37.11/arch/i386/lib: .depend
+Only in amithlon-2.4.37.11/arch/i386/mm: .depend
+Files linux-2.4.37.11/arch/i386/mm/fault.c and amithlon-2.4.37.11/arch/i386/mm/fault.c differ
+Files linux-2.4.37.11/arch/i386/mm/init.c and amithlon-2.4.37.11/arch/i386/mm/init.c differ
+Only in amithlon-2.4.37.11/: cb
+Only in amithlon-2.4.37.11/: ci
+Only in amithlon-2.4.37.11/: .config
+Only in amithlon-2.4.37.11/: .config.old
+Only in amithlon-2.4.37.11/crypto: .depend
+Only in amithlon-2.4.37.11/: .depend
+Only in amithlon-2.4.37.11/drivers/acorn/scsi: .depend
+Only in amithlon-2.4.37.11/drivers/acpi: .depend
+Only in amithlon-2.4.37.11/drivers/atm: .depend
+Only in amithlon-2.4.37.11/drivers/block: .depend
+Only in amithlon-2.4.37.11/drivers/block/paride: .depend
+Only in amithlon-2.4.37.11/drivers/bluetooth: .depend
+Only in amithlon-2.4.37.11/drivers/cdrom: .depend
+Only in amithlon-2.4.37.11/drivers/char/agp: .depend
+Only in amithlon-2.4.37.11/drivers/char: amithlon_pci.h
+Files linux-2.4.37.11/drivers/char/Config.in and amithlon-2.4.37.11/drivers/char/Config.in differ
+Only in amithlon-2.4.37.11/drivers/char: .depend
+Only in amithlon-2.4.37.11/drivers/char/drm: .depend
+Only in amithlon-2.4.37.11/drivers/char/drm-4.0: .depend
+Only in amithlon-2.4.37.11/drivers/char/ftape/compressor: .depend
+Only in amithlon-2.4.37.11/drivers/char/ftape: .depend
+Only in amithlon-2.4.37.11/drivers/char/ftape/lowlevel: .depend
+Only in amithlon-2.4.37.11/drivers/char/ftape/zftape: .depend
+Only in amithlon-2.4.37.11/drivers/char/ipmi: .depend
+Only in amithlon-2.4.37.11/drivers/char: irq.c
+Only in amithlon-2.4.37.11/drivers/char: irq.h
+Only in amithlon-2.4.37.11/drivers/char/joystick: .depend
+Files linux-2.4.37.11/drivers/char/keyboard.c and amithlon-2.4.37.11/drivers/char/keyboard.c differ
+Only in amithlon-2.4.37.11/drivers/char: magic_kbd.c
+Files linux-2.4.37.11/drivers/char/Makefile and amithlon-2.4.37.11/drivers/char/Makefile differ
+Only in amithlon-2.4.37.11/drivers/char: Makefile.orig
+Files linux-2.4.37.11/drivers/char/mem.c and amithlon-2.4.37.11/drivers/char/mem.c differ
+Files linux-2.4.37.11/drivers/char/misc.c and amithlon-2.4.37.11/drivers/char/misc.c differ
+Only in amithlon-2.4.37.11/drivers/char/mwave: .depend
+Files linux-2.4.37.11/drivers/char/pc_keyb.c and amithlon-2.4.37.11/drivers/char/pc_keyb.c differ
+Only in amithlon-2.4.37.11/drivers/char/pcmcia: .depend
+Only in amithlon-2.4.37.11/drivers/char/rio: .depend
+Only in amithlon-2.4.37.11/drivers: .depend
+Only in amithlon-2.4.37.11/drivers/dio: .depend
+Only in amithlon-2.4.37.11/drivers/fc4: .depend
+Only in amithlon-2.4.37.11/drivers/gsc: .depend
+Only in amithlon-2.4.37.11/drivers/hil: .depend
+Only in amithlon-2.4.37.11/drivers/hotplug: .depend
+Only in amithlon-2.4.37.11/drivers/i2c: .depend
+Only in amithlon-2.4.37.11/drivers/ide/arm: .depend
+Only in amithlon-2.4.37.11/drivers/ide: .depend
+Only in amithlon-2.4.37.11/drivers/ide/legacy: .depend
+Only in amithlon-2.4.37.11/drivers/ide/pci: .depend
+Only in amithlon-2.4.37.11/drivers/ide/ppc: .depend
+Only in amithlon-2.4.37.11/drivers/ide/raid: .depend
+Only in amithlon-2.4.37.11/drivers/ieee1394: .depend
+Only in amithlon-2.4.37.11/drivers/input: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/act2000: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/avmb1: .depend
+Only in amithlon-2.4.37.11/drivers/isdn: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/divert: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/eicon: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/hisax: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/hysdn: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/icn: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/isdnloop: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/pcbit: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/sc: .depend
+Only in amithlon-2.4.37.11/drivers/isdn/tpam: .depend
+Only in amithlon-2.4.37.11/drivers/macintosh: .depend
+Only in amithlon-2.4.37.11/drivers/md: .depend
+Only in amithlon-2.4.37.11/drivers/media: .depend
+Only in amithlon-2.4.37.11/drivers/media/radio: .depend
+Only in amithlon-2.4.37.11/drivers/media/video: .depend
+Only in amithlon-2.4.37.11/drivers/message/fusion: .depend
+Only in amithlon-2.4.37.11/drivers/message/i2o: .depend
+Only in amithlon-2.4.37.11/drivers/misc: .depend
+Only in amithlon-2.4.37.11/drivers/mtd/chips: .depend
+Files linux-2.4.37.11/drivers/mtd/Config.in and amithlon-2.4.37.11/drivers/mtd/Config.in differ
+Only in amithlon-2.4.37.11/drivers/mtd: .depend
+Only in amithlon-2.4.37.11/drivers/mtd/devices: .depend
+Only in amithlon-2.4.37.11/drivers/mtd/maps: .depend
+Only in amithlon-2.4.37.11/drivers/mtd: mtduae.c
+Only in amithlon-2.4.37.11/drivers/mtd/nand: .depend
+Files linux-2.4.37.11/drivers/net/8139too.c and amithlon-2.4.37.11/drivers/net/8139too.c differ
+Only in amithlon-2.4.37.11/drivers/net/appletalk: .depend
+Only in amithlon-2.4.37.11/drivers/net/arcnet: .depend
+Only in amithlon-2.4.37.11/drivers/net/bonding: .depend
+Only in amithlon-2.4.37.11/drivers/net: .depend
+Only in amithlon-2.4.37.11/drivers/net/e100: .depend
+Only in amithlon-2.4.37.11/drivers/net/e1000: .depend
+Only in amithlon-2.4.37.11/drivers/net/fc: .depend
+Only in amithlon-2.4.37.11/drivers/net/hamradio: .depend
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: .depend
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: gentbl
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_afsk1200.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_afsk2400_7.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_afsk2400_8.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_afsk2666.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_fsk9600.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_hapn4800.h
+Only in amithlon-2.4.37.11/drivers/net/hamradio/soundmodem: sm_tbl_psk4800.h
+Only in amithlon-2.4.37.11/drivers/net/ibm_emac: .depend
+Only in amithlon-2.4.37.11/drivers/net/irda: .depend
+Files linux-2.4.37.11/drivers/net/natsemi.c and amithlon-2.4.37.11/drivers/net/natsemi.c differ
+Only in amithlon-2.4.37.11/drivers/net/pcmcia: .depend
+Files linux-2.4.37.11/drivers/net/setup.c and amithlon-2.4.37.11/drivers/net/setup.c differ
+Only in amithlon-2.4.37.11/drivers/net/sk98lin: .depend
+Only in amithlon-2.4.37.11/drivers/net/skfp: .depend
+Only in amithlon-2.4.37.11/drivers/net/tokenring: .depend
+Only in amithlon-2.4.37.11/drivers/net/tulip: .depend
+Only in amithlon-2.4.37.11/drivers/net/wan/8253x: .depend
+Only in amithlon-2.4.37.11/drivers/net/wan: .depend
+Only in amithlon-2.4.37.11/drivers/net/wan/lmc: .depend
+Files linux-2.4.37.11/drivers/net/winbond-840.c and amithlon-2.4.37.11/drivers/net/winbond-840.c differ
+Only in amithlon-2.4.37.11/drivers/net/wireless: .depend
+Only in amithlon-2.4.37.11/drivers/net/wireless/prism54: .depend
+Only in amithlon-2.4.37.11/drivers/nubus: .depend
+Only in amithlon-2.4.37.11/drivers/parport: .depend
+Only in amithlon-2.4.37.11/drivers/pci: .depend
+Files linux-2.4.37.11/drivers/pci/pci.c and amithlon-2.4.37.11/drivers/pci/pci.c differ
+Only in amithlon-2.4.37.11/drivers/pcmcia: .depend
+Only in amithlon-2.4.37.11/drivers/pnp: .depend
+Only in amithlon-2.4.37.11/drivers/sbus/audio: .depend
+Only in amithlon-2.4.37.11/drivers/sbus/char: .depend
+Only in amithlon-2.4.37.11/drivers/sbus: .depend
+Only in amithlon-2.4.37.11/drivers/scsi/aacraid: .depend
+Only in amithlon-2.4.37.11/drivers/scsi/aic7xxx: .depend
+Only in amithlon-2.4.37.11/drivers/scsi: .depend
+Files linux-2.4.37.11/drivers/scsi/ide-scsi.c and amithlon-2.4.37.11/drivers/scsi/ide-scsi.c differ
+Only in amithlon-2.4.37.11/drivers/scsi/pcmcia: .depend
+Files linux-2.4.37.11/drivers/scsi/scsi.c and amithlon-2.4.37.11/drivers/scsi/scsi.c differ
+Files linux-2.4.37.11/drivers/scsi/sg.c and amithlon-2.4.37.11/drivers/scsi/sg.c differ
+Only in amithlon-2.4.37.11/drivers/scsi/sym53c8xx_2: .depend
+Only in amithlon-2.4.37.11/drivers/sound/cs4281: .depend
+Only in amithlon-2.4.37.11/drivers/sound: .depend
+Only in amithlon-2.4.37.11/drivers/sound/dmasound: .depend
+Only in amithlon-2.4.37.11/drivers/sound/emu10k1: .depend
+Files linux-2.4.37.11/drivers/sound/i810_audio.c and amithlon-2.4.37.11/drivers/sound/i810_audio.c differ
+Only in amithlon-2.4.37.11/drivers/sound: i810_audio.c~
+Only in amithlon-2.4.37.11/drivers/tc: .depend
+Only in amithlon-2.4.37.11/drivers/telephony: .depend
+Only in amithlon-2.4.37.11/drivers/usb: .depend
+Only in amithlon-2.4.37.11/drivers/usb/gadget: .depend
+Only in amithlon-2.4.37.11/drivers/usb/host: .depend
+Only in amithlon-2.4.37.11/drivers/usb/serial: .depend
+Only in amithlon-2.4.37.11/drivers/usb/storage: .depend
+Only in amithlon-2.4.37.11/drivers/video: amithlon.h
+Files linux-2.4.37.11/drivers/video/aty/atyfb_base.c and amithlon-2.4.37.11/drivers/video/aty/atyfb_base.c differ
+Only in amithlon-2.4.37.11/drivers/video/aty: .depend
+Files linux-2.4.37.11/drivers/video/aty128fb.c and amithlon-2.4.37.11/drivers/video/aty128fb.c differ
+Files linux-2.4.37.11/drivers/video/aty128.h and amithlon-2.4.37.11/drivers/video/aty128.h differ
+Files linux-2.4.37.11/drivers/video/clgenfb.c and amithlon-2.4.37.11/drivers/video/clgenfb.c differ
+Files linux-2.4.37.11/drivers/video/Config.in and amithlon-2.4.37.11/drivers/video/Config.in differ
+Files linux-2.4.37.11/drivers/video/cyber2000fb.c and amithlon-2.4.37.11/drivers/video/cyber2000fb.c differ
+Only in amithlon-2.4.37.11/drivers/video: .depend
+Files linux-2.4.37.11/drivers/video/fbcon.c and amithlon-2.4.37.11/drivers/video/fbcon.c differ
+Files linux-2.4.37.11/drivers/video/fbcon-cfb32.c and amithlon-2.4.37.11/drivers/video/fbcon-cfb32.c differ
+Files linux-2.4.37.11/drivers/video/fbmem.c and amithlon-2.4.37.11/drivers/video/fbmem.c differ
+Only in amithlon-2.4.37.11/drivers/video/intel: .depend
+Only in amithlon-2.4.37.11/drivers/video/matrox: .depend
+Files linux-2.4.37.11/drivers/video/matrox/matroxfb_accel.c and amithlon-2.4.37.11/drivers/video/matrox/matroxfb_accel.c differ
+Files linux-2.4.37.11/drivers/video/matrox/matroxfb_base.c and amithlon-2.4.37.11/drivers/video/matrox/matroxfb_base.c differ
+Files linux-2.4.37.11/drivers/video/radeonfb.c and amithlon-2.4.37.11/drivers/video/radeonfb.c differ
+Files linux-2.4.37.11/drivers/video/radeon.h and amithlon-2.4.37.11/drivers/video/radeon.h differ
+Files linux-2.4.37.11/drivers/video/riva/accel.c and amithlon-2.4.37.11/drivers/video/riva/accel.c differ
+Only in amithlon-2.4.37.11/drivers/video/riva: .depend
+Files linux-2.4.37.11/drivers/video/riva/fbdev.c and amithlon-2.4.37.11/drivers/video/riva/fbdev.c differ
+Files linux-2.4.37.11/drivers/video/riva/Makefile and amithlon-2.4.37.11/drivers/video/riva/Makefile differ
+Files linux-2.4.37.11/drivers/video/riva/nv4ref.h and amithlon-2.4.37.11/drivers/video/riva/nv4ref.h differ
+Only in amithlon-2.4.37.11/drivers/video/riva: nv_setup.c
+Only in amithlon-2.4.37.11/drivers/video/riva: nv_type.h
+Files linux-2.4.37.11/drivers/video/riva/rivafb.h and amithlon-2.4.37.11/drivers/video/riva/rivafb.h differ
+Files linux-2.4.37.11/drivers/video/riva/riva_hw.c and amithlon-2.4.37.11/drivers/video/riva/riva_hw.c differ
+Files linux-2.4.37.11/drivers/video/riva/riva_hw.h and amithlon-2.4.37.11/drivers/video/riva/riva_hw.h differ
+Files linux-2.4.37.11/drivers/video/riva/riva_tbl.h and amithlon-2.4.37.11/drivers/video/riva/riva_tbl.h differ
+Only in amithlon-2.4.37.11/drivers/video/sis: .depend
+Only in amithlon-2.4.37.11/drivers/video/sti: .depend
+Files linux-2.4.37.11/drivers/video/tdfxfb.c and amithlon-2.4.37.11/drivers/video/tdfxfb.c differ
+Files linux-2.4.37.11/drivers/video/vesafb.c and amithlon-2.4.37.11/drivers/video/vesafb.c differ
+Only in amithlon-2.4.37.11/drivers/zorro: .depend
+Only in amithlon-2.4.37.11/fs/adfs: .depend
+Only in amithlon-2.4.37.11/fs/affs: .depend
+Only in amithlon-2.4.37.11/fs/autofs: .depend
+Only in amithlon-2.4.37.11/fs/autofs4: .depend
+Only in amithlon-2.4.37.11/fs/befs: .depend
+Only in amithlon-2.4.37.11/fs/bfs: .depend
+Only in amithlon-2.4.37.11/fs/coda: .depend
+Files linux-2.4.37.11/fs/Config.in and amithlon-2.4.37.11/fs/Config.in differ
+Only in amithlon-2.4.37.11/fs/cramfs: .depend
+Only in amithlon-2.4.37.11/fs: .depend
+Only in amithlon-2.4.37.11/fs/devfs: .depend
+Only in amithlon-2.4.37.11/fs/devpts: .depend
+Only in amithlon-2.4.37.11/fs/efs: .depend
+Only in amithlon-2.4.37.11/fs/ext2: .depend
+Only in amithlon-2.4.37.11/fs/ext3: .depend
+Only in amithlon-2.4.37.11/fs/fat: .depend
+Only in amithlon-2.4.37.11/fs/freevxfs: .depend
+Only in amithlon-2.4.37.11/fs/hfs: .depend
+Only in amithlon-2.4.37.11/fs/hfsplus: .depend
+Only in amithlon-2.4.37.11/fs/hpfs: .depend
+Only in amithlon-2.4.37.11/fs/intermezzo: .depend
+Only in amithlon-2.4.37.11/fs/isofs: .depend
+Only in amithlon-2.4.37.11/fs/jbd: .depend
+Only in amithlon-2.4.37.11/fs/jffs: .depend
+Only in amithlon-2.4.37.11/fs/jffs2: .depend
+Only in amithlon-2.4.37.11/fs/jfs: .depend
+Only in amithlon-2.4.37.11/fs/lockd: .depend
+Only in amithlon-2.4.37.11/fs/minix: .depend
+Only in amithlon-2.4.37.11/fs/msdos: .depend
+Only in amithlon-2.4.37.11/fs/ncpfs: .depend
+Only in amithlon-2.4.37.11/fs/nfs: .depend
+Only in amithlon-2.4.37.11/fs/nfsd: .depend
+Only in amithlon-2.4.37.11/fs/nls: .depend
+Only in amithlon-2.4.37.11/fs/ntfs: .depend
+Only in amithlon-2.4.37.11/fs/openpromfs: .depend
+Only in amithlon-2.4.37.11/fs/partitions: .depend
+Only in amithlon-2.4.37.11/fs/proc: .depend
+Files linux-2.4.37.11/fs/proc/kmsg.c and amithlon-2.4.37.11/fs/proc/kmsg.c differ
+Files linux-2.4.37.11/fs/proc/proc_misc.c and amithlon-2.4.37.11/fs/proc/proc_misc.c differ
+Only in amithlon-2.4.37.11/fs/proc: proc_misc.c~
+Only in amithlon-2.4.37.11/fs/qnx4: .depend
+Only in amithlon-2.4.37.11/fs/ramfs: .depend
+Only in amithlon-2.4.37.11/fs/reiserfs: .depend
+Only in amithlon-2.4.37.11/fs/romfs: .depend
+Only in amithlon-2.4.37.11/fs/smbfs: .depend
+Only in amithlon-2.4.37.11/fs/sysv: .depend
+Only in amithlon-2.4.37.11/fs/udf: .depend
+Only in amithlon-2.4.37.11/fs/ufs: .depend
+Only in amithlon-2.4.37.11/fs/umsdos: .depend
+Only in amithlon-2.4.37.11/fs/vfat: .depend
+Only in amithlon-2.4.37.11/fs/xfs: .depend
+Only in amithlon-2.4.37.11/fs/xfs/linux-2.4: .depend
+Only in amithlon-2.4.37.11/fs/xfs/support: .depend
+Only in amithlon-2.4.37.11/: .hdepend
+Files linux-2.4.37.11/include/asm-i386/irq.h and amithlon-2.4.37.11/include/asm-i386/irq.h differ
+Files linux-2.4.37.11/include/asm-i386/processor.h and amithlon-2.4.37.11/include/asm-i386/processor.h differ
+Only in amithlon-2.4.37.11/include: config
+Only in amithlon-2.4.37.11/include/linux: ainstr_fm.h
+Only in amithlon-2.4.37.11/include/linux: ainstr_gf1.h
+Only in amithlon-2.4.37.11/include/linux: ainstr_iw.h
+Only in amithlon-2.4.37.11/include/linux: ainstr_simple.h
+Only in amithlon-2.4.37.11/include/linux: asequencer.h
+Only in amithlon-2.4.37.11/include/linux: asoundef.h
+Only in amithlon-2.4.37.11/include/linux: asound.h
+Only in amithlon-2.4.37.11/include/linux: asoundid.h
+Only in amithlon-2.4.37.11/include/linux: autoconf.h
+Only in amithlon-2.4.37.11/include/linux: biglogo2.h
+Only in amithlon-2.4.37.11/include/linux: biglogo.h
+Files linux-2.4.37.11/include/linux/bootmem.h and amithlon-2.4.37.11/include/linux/bootmem.h differ
+Only in amithlon-2.4.37.11/include/linux: compat
+Only in amithlon-2.4.37.11/include/linux: df
+Files linux-2.4.37.11/include/linux/keyboard.h and amithlon-2.4.37.11/include/linux/keyboard.h differ
+Files linux-2.4.37.11/include/linux/linux_logo.h and amithlon-2.4.37.11/include/linux/linux_logo.h differ
+Files linux-2.4.37.11/include/linux/miscdevice.h and amithlon-2.4.37.11/include/linux/miscdevice.h differ
+Only in amithlon-2.4.37.11/include/linux: modversions.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv4: ipt_DSCP.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv4: ipt_ECN.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv4: ipt_MARK.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv4: ipt_TCPMSS.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv4: ipt_TOS.h
+Only in linux-2.4.37.11/include/linux/netfilter_ipv6: ip6t_MARK.h
+Files linux-2.4.37.11/include/linux/pci.h and amithlon-2.4.37.11/include/linux/pci.h differ
+Files linux-2.4.37.11/include/linux/pci_ids.h and amithlon-2.4.37.11/include/linux/pci_ids.h differ
+Files linux-2.4.37.11/include/linux/pc_keyb.h and amithlon-2.4.37.11/include/linux/pc_keyb.h differ
+Files linux-2.4.37.11/include/linux/timex.h and amithlon-2.4.37.11/include/linux/timex.h differ
+Only in amithlon-2.4.37.11/include/linux: uae.h
+Only in amithlon-2.4.37.11/include/linux: version.h
+Only in amithlon-2.4.37.11/include/net: slhc.h
+Only in amithlon-2.4.37.11/include/video: vga.h
+Files linux-2.4.37.11/init/main.c and amithlon-2.4.37.11/init/main.c differ
+Only in amithlon-2.4.37.11/ipc: .depend
+Only in amithlon-2.4.37.11/kernel: .depend
+Files linux-2.4.37.11/kernel/printk.c and amithlon-2.4.37.11/kernel/printk.c differ
+Files linux-2.4.37.11/kernel/sched.c and amithlon-2.4.37.11/kernel/sched.c differ
+Only in amithlon-2.4.37.11/lib: crc32table.h
+Only in amithlon-2.4.37.11/lib: .depend
+Only in amithlon-2.4.37.11/lib: gen_crc32table
+Only in amithlon-2.4.37.11/lib/zlib_deflate: .depend
+Only in amithlon-2.4.37.11/lib/zlib_inflate: .depend
+Only in amithlon-2.4.37.11/: .menuconfig.log
+Files linux-2.4.37.11/mm/bootmem.c and amithlon-2.4.37.11/mm/bootmem.c differ
+Only in amithlon-2.4.37.11/mm: .depend
+Only in amithlon-2.4.37.11/net/802: .depend
+Only in amithlon-2.4.37.11/net/802/transit: .depend
+Only in amithlon-2.4.37.11/net/8021q: .depend
+Only in amithlon-2.4.37.11/net/appletalk: .depend
+Only in amithlon-2.4.37.11/net/atm: .depend
+Only in amithlon-2.4.37.11/net/ax25: .depend
+Only in amithlon-2.4.37.11/net/bluetooth/bnep: .depend
+Only in amithlon-2.4.37.11/net/bluetooth/cmtp: .depend
+Only in amithlon-2.4.37.11/net/bluetooth: .depend
+Only in amithlon-2.4.37.11/net/bluetooth/rfcomm: .depend
+Only in amithlon-2.4.37.11/net/bridge: .depend
+Only in amithlon-2.4.37.11/net/core: .depend
+Only in amithlon-2.4.37.11/net/decnet: .depend
+Only in amithlon-2.4.37.11/net: .depend
+Only in amithlon-2.4.37.11/net/econet: .depend
+Only in amithlon-2.4.37.11/net/ethernet: .depend
+Only in amithlon-2.4.37.11/net/ipv4: .depend
+Only in amithlon-2.4.37.11/net/ipv4/netfilter: .depend
+Only in linux-2.4.37.11/net/ipv4/netfilter: ipt_DSCP.c
+Only in linux-2.4.37.11/net/ipv4/netfilter: ipt_ECN.c
+Only in linux-2.4.37.11/net/ipv4/netfilter: ipt_MARK.c
+Only in linux-2.4.37.11/net/ipv4/netfilter: ipt_TCPMSS.c
+Only in linux-2.4.37.11/net/ipv4/netfilter: ipt_TOS.c
+Only in amithlon-2.4.37.11/net/ipv6: .depend
+Only in linux-2.4.37.11/net/ipv6/netfilter: ip6t_MARK.c
+Only in amithlon-2.4.37.11/net/ipx: .depend
+Only in amithlon-2.4.37.11/net/irda: .depend
+Only in amithlon-2.4.37.11/net/irda/ircomm: .depend
+Only in amithlon-2.4.37.11/net/irda/irlan: .depend
+Only in amithlon-2.4.37.11/net/irda/irnet: .depend
+Only in amithlon-2.4.37.11/net/khttpd: .depend
+Only in amithlon-2.4.37.11/net/lapb: .depend
+Only in amithlon-2.4.37.11/net/netlink: .depend
+Only in amithlon-2.4.37.11/net/netrom: .depend
+Only in amithlon-2.4.37.11/net/packet: .depend
+Only in amithlon-2.4.37.11/net/rose: .depend
+Only in amithlon-2.4.37.11/net/sched: .depend
+Only in amithlon-2.4.37.11/net/sctp: .depend
+Only in amithlon-2.4.37.11/net/sunrpc: .depend
+Only in amithlon-2.4.37.11/net/unix: .depend
+Only in amithlon-2.4.37.11/net/wanrouter: .depend
+Only in amithlon-2.4.37.11/net/x25: .depend
+Only in amithlon-2.4.37.11/scripts/lxdialog: checklist.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: inputbox.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: lxdialog
+Only in amithlon-2.4.37.11/scripts/lxdialog: lxdialog.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: menubox.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: msgbox.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: textbox.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: util.o
+Only in amithlon-2.4.37.11/scripts/lxdialog: yesno.o
+Only in amithlon-2.4.37.11/scripts: mkdep
+Only in amithlon-2.4.37.11/scripts: split-include
+Only in amithlon-2.4.37.11/: .version

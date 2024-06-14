@@ -1,0 +1,3 @@
+[submodule "linux4amithlon"]
+	path = linux4amithlon
+	url = git@github.com:elusivewompus/linux4amithlon.git
